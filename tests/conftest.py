@@ -1,12 +1,14 @@
-"""
-tests/conftest.py
-=================
+# tests/conftest.py
+"""Testing fixtures.
+
 Global configuration file and shared test fixtures for the pytest framework.
 This file configures environment overrides and cross-platform paths for tests.
 """
 
 import sys
+
 import pytest
+
 
 # Ensure our Python testing environment can seamlessly see and import modules
 # from the root folder where our main generation engine will live.
@@ -14,9 +16,10 @@ sys.path.insert(0, ".")
 
 @pytest.fixture
 def manifest_v1() -> str:
-    """
-    A shared fixture providing a standard, minimal mock YAML configuration.
-    This simulates a valid vendor configuration file for testing processors.
+    """Complete mock YAML configuration.
+
+    A shared fixture providing a standard, mock YAML configuration. This simulates a valid vendor
+    configuration file for testing processors.
 
     Returns:
         str: A raw, multiline YAML string representing a standard repository.
@@ -43,8 +46,7 @@ os_mappings:
 
 @pytest.fixture
 def changelog_v1() -> str:
-    """
-    Lintian-compliant initial Genesis changelog text block.
+    """Lintian-compliant initial Genesis changelog text block.
 
     Returns:
         str: A multiline string representing a changelog.
@@ -71,7 +73,8 @@ def changelog_v1() -> str:
 
 @pytest.fixture
 def manifest_v2() -> str:
-    """
+    """Complete mock YAML configuration with version bump.
+
     Provides a mock YAML configuration string representing a version 1.0.1 bump.
     This lifecycle state alters the vendor URL string and description parameters
     while preserving the background background array layouts.
@@ -101,7 +104,8 @@ os_mappings:
 
 @pytest.fixture
 def changelog_v2(changelog_v1: str) -> str:
-    """
+    """Cumulative v1 & v2 changleog fixture.
+
     Assembles a historical cumulative changelog string for version 1.0.1.
     This injects the human-readable parameter modification bullets and
     stacks the previous v1 release text block chronologically at the bottom.
@@ -126,8 +130,8 @@ def changelog_v2(changelog_v1: str) -> str:
 
 @pytest.fixture
 def manifest_v3() -> str:
-    """
-    Provides a mock YAML configuration string representing a version 1.0.2 bump.
+    """Provides a mock YAML configuration string representing a version 1.0.2 bump.
+
     This lifecycle state switches the keyring to dynamic installation mode and
     removes the second index rule from the os_mappings array layout.
 
@@ -153,7 +157,8 @@ os_mappings:
 
 @pytest.fixture
 def changelog_v3(changelog_v2: str) -> str:
-    """
+    """Cumulative v1, v2 & v3 changleog fixture.
+
     Assembles the final cumulative master changelog text layout for version 1.0.2.
     This tracks a partial array removal by explicitly naming the match value
     of the deleted rule, ensuring index stability across future updates.
@@ -177,9 +182,10 @@ def changelog_v3(changelog_v2: str) -> str:
 
 @pytest.fixture
 def manifest_invalid_schema() -> str:
-    """
+    """Malformed YAML fixture.
+
     Provides a malformed YAML configuration string missing mandatory parameters
-    such as 'description' and the entire child 'repo' dictionary structure.
+    such as 'description' and most of the 'repo' dictionary structure.
 
     Returns:
         str: A raw, invalid multiline YAML string for schema verification.
@@ -193,11 +199,10 @@ os_mappings:
     set_dist: ubuntu
 """
 
-import pytest
 
 @pytest.fixture
 def manifest_invalid_repo_type() -> str:
-    """Provides a manifest layout where the repo key is a raw string instead of a dictionary."""
+    """A manifest layout where the repo key is a raw string instead of a dictionary."""
     return """name: broken-repo
 version: 1.0.0
 description: Testing invalid repo dictionary type guard.
@@ -208,7 +213,7 @@ repo: "this_should_be_a_dictionary_but_is_a_string"
 
 @pytest.fixture
 def manifest_invalid_mappings_type() -> str:
-    """Provides a manifest layout where os_mappings is a string instead of a bulleted array list."""
+    """A manifest layout where os_mappings is a string instead of a bulleted array list."""
     return """name: broken-repo
 version: 1.0.0
 description: Testing invalid mappings array list type guard.
@@ -224,7 +229,7 @@ os_mappings: "this_should_be_a_list_but_is_a_string"
 
 @pytest.fixture
 def manifest_invalid_mapping_item_type() -> str:
-    """Provides a manifest layout where an os_mappings item is a flat string instead of a sub-dictionary."""
+    """A manifest layout where an os_mappings item is a flat string instead of a sub-dictionary."""
     return """name: broken-repo
 version: 1.0.0
 description: Testing invalid individual mapping item block type guard.

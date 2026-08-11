@@ -1,6 +1,6 @@
-"""
-tests/test_unit_logger.py
-=========================
+# tests/test_unit_logger.py
+"""Logger unit tests.
+
 Discrete unit specifications validating the PSR-3 level thresholds, color
 routing, and file-mirroring mechanisms managed by the Logger service.
 """
@@ -44,8 +44,7 @@ def test_logger_psr3_methods_respect_terminal_thresholds(
     message: str,
     should_print_to_console: bool
 ) -> None:
-    """
-    Verifies that all 8 standard PSR-3 interface methods exist and are
+    """Verifies that all 8 standard PSR-3 interface methods exist and are
     correctly filtered or displayed based on the terminal threshold settings.
     """
     # 1. SETUP: Initialize a logger with a 'warning' minimum threshold level.
@@ -74,8 +73,7 @@ def test_logger_psr3_methods_respect_terminal_thresholds(
         )
 
 def test_logger_silently_drops_filesystem_write_exceptions(tmp_path: Path) -> None:
-    """
-    Verifies that the Logger service catches and silently handles filesystem
+    """Verifies that the Logger service catches and silently handles filesystem
     write exceptions without crashing the primary execution sequence thread.
     """
     target_log_file = tmp_path / "faulty_device.log"
@@ -100,8 +98,7 @@ def test_logger_silently_drops_filesystem_write_exceptions(tmp_path: Path) -> No
 def test_logger_successfully_writes_uncolored_psr3_entries_to_healthy_file(
     tmp_path: Path
 ) -> None:
-    """
-    Verifies that the Logger successfully executes the write command line path
+    """Verifies that the Logger successfully executes the write command line path
     when routed to a healthy, writable destination on the filesystem platter.
     """
     # 1. SETUP: Create a real log file path in our temporary test sandbox folder

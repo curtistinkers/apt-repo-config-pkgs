@@ -1,20 +1,21 @@
-"""
-tests/test_functional_cli.py
-============================
+# tests/test_functional_cli.py
+"""Functional integration tests for CLI.
+
 End-to-end functional integration specifications verifying CLI command
 orchestration, argument parsing, and system directory compilation.
 """
 
-import os
 from pathlib import Path
+
 from click.testing import CliRunner
-import pytest
+
 
 def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     tmp_path: Path,
     manifest_v1: str
 ) -> None:
-    """
+    """Verifies the build subcommand.
+
     Verifies that executing the 'build' subcommand via the CLI runner:
     1. Successfully parses directory arguments and the --debug flag.
     2. Validates and compiles raw manifest data models.

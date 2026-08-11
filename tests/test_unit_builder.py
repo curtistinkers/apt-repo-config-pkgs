@@ -1,22 +1,25 @@
-"""
-tests/test_unit_builder.py
-==========================
+# tests/test_unit_builder.py
+"""DebianProjectBuilder unit tests.
+
 Discrete unit specifications validating the folder orchestration and file
 generation layer managed by the DebianPackageBuilder class.
 """
 
 from pathlib import Path
+
 import yaml
-import pytest
-from package_generator import RepositoryManifest, DebianPackageBuilder
+
+from package_generator import DebianPackageBuilder, Logger, RepositoryManifest
+
 
 def test_builder_orchestrates_clean_package_directory_tree(
     tmp_path: Path,
     manifest_v1: str
 ) -> None:
-    """
-    Verifies that DebianPackageBuilder uses a compiled PackageConfig DVO
-    to orchestrate the required debian/ source directories on disk.
+    """Verifies source tree directory orchestration.
+
+    Ensures that DebianPackageBuilder uses a PackageConfig to create
+    debian/ source directories on disk.
     """
     # 1. SETUP: Prepare our inputs and output paths in our sandbox
     raw_data = yaml.safe_load(manifest_v1)
@@ -25,8 +28,11 @@ def test_builder_orchestrates_clean_package_directory_tree(
     # Define our temporary sources sandbox output folder
     sources_dir = tmp_path / "dpkg-sources"
 
+    # Initialize a real logger, configured to be completely quiet during our test run
+    silent_logger = Logger(min_terminal_level="emergency")
+
     # Instantiate our new infrastructure builder class
-    builder = DebianPackageBuilder(sources_dir=sources_dir)
+    builder = DebianPackageBuilder(sources_dir=sources_dir, logger=silent_logger)
 
     # 2. EXECUTION: Run the target folder orchestration method
     target_debian_dir = builder.create_package_tree(manifest.config)
@@ -39,9 +45,10 @@ def test_builder_orchestrates_clean_package_directory_tree(
     assert target_debian_dir.is_dir(), "The target destination path is not a valid directory."
 
 def test_builder_successfully_removes_sources_directory_tree(tmp_path: Path) -> None:
-    """
-    Verifies that the package builder can safely delete an entire
-    generated directory tree structure from the filesystem.
+    """Verifies source tree directory removal.
+
+    Ensures that the package builder can safely delete an entire generated
+    directory tree structure from the filesystem.
     """
     # 1. SETUP: Create a real temporary folder structure to be deleted
     mock_sources_dir = tmp_path / "dpkg-sources"
