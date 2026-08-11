@@ -243,3 +243,11 @@ os_mappings:
   - "flat_string_bullet_item_instead_of_dictionary"
   - "second_flat_string_bullet_item_instead_of_dictionary"
 """
+
+@pytest.fixture
+def manifest_corrupted_garbage_syntax() -> str:
+    """Provides a completely corrupted raw string text layout that violates YAML syntax."""
+    return """name: unparseable-package
+version: 1.0.0
+this is invalid un-indented garbage text layout lines that will break the parser structure { [ !!
+"""
