@@ -1,17 +1,17 @@
-"""
-tests/test_unit_cli.py
-======================
+# tests/test_unit_cli.py
+"""CLI unit tests.
+
 Discrete unit specifications validating the argument parsing boundaries,
 command routing, and option validations managed by the CLI interface group.
 """
 
-import os
 from click.testing import CliRunner
-import pytest
+
 
 def test_unit_cli_build_subcommand_routes_correctly() -> None:
-    """
-    Verifies that the CLI 'clean' subcommand exists under our main interface
+    """Validate build subcommand.
+
+    Verifies that the CLI 'build' subcommand exists under our main interface
     group and executes with a successful exit status code 0.
     """
     # 1. SETUP: Import the primary CLI group component block
@@ -27,7 +27,8 @@ def test_unit_cli_build_subcommand_routes_correctly() -> None:
     assert result.exit_code == 0
 
 def test_unit_cli_clean_subcommand_routes_correctly() -> None:
-    """
+    """Validate clean subcommand.
+
     Verifies that the CLI 'clean' subcommand exists under our main interface
     group and executes with a successful exit status code 0.
     """
