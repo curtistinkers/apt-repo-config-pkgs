@@ -1,0 +1,68 @@
+"""Debian template compilation engine.
+
+Provides infrastructure capabilities to read raw Jinja2 text templates from disk,
+inject strongly typed configuration properties, and compile them into finished
+Debian repository system configuration layout text streams.
+"""
+
+from pathlib import Path
+from typing import Any
+
+from jinja2 import Environment, FileSystemLoader
+
+from .logger import Logger
+from .models import PackageConfig, ProjectConfig
+
+
+class DebianTemplateCompiler:
+    """Manages file loading and variable rendering for Debian package templates."""
+
+    def __init__(self, templates_dir: Path, logger: Logger) -> None:
+        """Initializes the compiler with a template environment and logging hooks.
+
+        Args:
+            templates_dir: Physical directory path where real Jinja2 template
+                source files reside on the disk platter.
+            logger: An injected PSR-3 compliant diagnostic logging service.
+        """
+        self._logger = logger
+        self._templates_dir = templates_dir
+        self._env = Environment(
+            loader=FileSystemLoader(str(self._templates_dir)),
+            autoescape=False
+        )
+
+    def render_template(
+        self,
+        template_name: str,
+        package_config: PackageConfig,
+        project_config: ProjectConfig,
+    ) -> str:
+        """Loads a target template file from disk and renders its variable tokens.
+
+        Args:
+            template_name: The file name string of the target template block.
+            package_config: Strongly typed package parameters (e.g. name, version).
+            project_config: Global project parameters (e.g. maintainer data).
+
+        Returns:
+            The compiled uncolored text block stream containing injected values.
+        """
+        self._logger.debug(f"Loading template file asset track: {template_name}")
+        template = self._env.get_template(template_name)
+
+        self._logger.debug("Mapping strongly typed fields into flat template context variables...")
+
+        # translate DVO structures into flat tokens matching the control template
+        render_context: dict[str, Any] = {
+            "package_name": package_config.name,
+            "short_description": package_config.description,
+            "maintainer_name": project_config.maintainer_name,
+            "maintainer_email": project_config.maintainer_email,
+        }
+
+        # Pass the context map straight into the template context natively
+        compiled_output = template.render(**render_context)
+
+        self._logger.info(f"Successfully compiled template configuration layout: {template_name}")
+        return compiled_output
