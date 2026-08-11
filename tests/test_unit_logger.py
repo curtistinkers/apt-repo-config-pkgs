@@ -5,11 +5,13 @@ Discrete unit specifications validating the PSR-3 level thresholds, color
 routing, and file-mirroring mechanisms managed by the Logger service.
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch
-from package_generator.logger import LogLevel
-from package_generator.logger import Logger
+
+import pytest
+
+from package_generator.logger import Logger, LogLevel
+
 
 def test_unit_log_level_model_enforces_mathematical_hierarchy() -> None:
     """Verifies that the LogLevel Enum constants compare accurately by severity weight."""
@@ -63,9 +65,13 @@ def test_logger_psr3_methods_respect_terminal_thresholds(
     expected_string = f"{method_name.upper()}: {message}"
 
     if should_print_to_console:
-        assert expected_string in combined_output, f"Method {method_name} failed to log to console."
+        assert expected_string in combined_output, (
+            f"Method {method_name} failed to log to console."
+        )
     else:
-        assert expected_string not in combined_output, f"Method {method_name} incorrectly logged to console."
+        assert expected_string not in combined_output, (
+            f"Method {method_name} incorrectly logged to console."
+        )
 
 def test_logger_silently_drops_filesystem_write_exceptions(tmp_path: Path) -> None:
     """
@@ -85,7 +91,7 @@ def test_logger_silently_drops_filesystem_write_exceptions(tmp_path: Path) -> No
     with patch("builtins.open", side_effect=OSError("Disk partition mounted read-only.")):
         # This trace call tries to write to the file, encounters the patch error,
         # and drives execution directly down into your 'except Exception:' block.
-        faulty_logger.debug("Attempting to write telemetry data to a broken platter asset.")
+        faulty_logger.debug("Attempting to write build log data to a broken platter asset.")
 
     # If we reached this line without the test function crashing, the except block
     # successfully caught the error and protected our runtime engine pipeline.
@@ -115,4 +121,7 @@ def test_logger_successfully_writes_uncolored_psr3_entries_to_healthy_file(
     assert healthy_log_file.exists(), "The logger failed to create the physical file layout."
 
     file_content_ledger = healthy_log_file.read_text(encoding="utf-8")
-    assert "INFO: Executing standard package folder layout extraction processes." in file_content_ledger
+    assert (
+        "INFO: Executing standard package folder layout extraction processes."
+        in file_content_ledger
+    )
