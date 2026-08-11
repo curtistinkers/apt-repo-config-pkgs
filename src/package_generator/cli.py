@@ -1,7 +1,7 @@
-"""
-package_generator.cli
-=====================
-Command-line interface specification layer. Maps incoming terminal arguments,
+# src/package_generator/cli.py
+"""Command-line interface specification layer.
+
+Maps incoming terminal arguments,
 subcommands, and debug flags to core business logic orchestration layers.
 """
 
@@ -59,7 +59,7 @@ def build_packages_command(manifests_dir: Path, sources_dir: Path, debug: bool) 
 
             try:
                 # 1. READ: Load raw text track from the filesystem platter
-                with open(item, "r", encoding="utf-8") as file_stream:
+                with open(item, encoding="utf-8") as file_stream:
                     raw_yaml_data = yaml.safe_load(file_stream)
 
                 # 2. VALIDATE & COMPILE: Feed primitive dict to our translator domain layer

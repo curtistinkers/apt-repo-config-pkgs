@@ -1,9 +1,5 @@
-# package_generator/manifest.py
-"""
-package_generator.manifest
-==========================
-Input validator layer parsing raw dictionary inputs into strongly typed DVOs.
-"""
+# src/package_generator/manifest.py
+"""Input validator layer parsing raw dictionary inputs into strongly typed DVOs."""
 
 from .models import PackageConfig, PackageOSMappingConfig, PackageRepoConfig
 

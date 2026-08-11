@@ -1,6 +1,6 @@
-"""
-package_generator.logger
-========================
+# src/package_generator/logger.py
+"""Diagnostic logger implementation.
+
 An object-oriented diagnostic logger implementing a clean PSR-3 interface contract.
 Handles rich color console filtering and explicit uncolored file routing.
 """
@@ -14,9 +14,7 @@ import click
 
 
 class LogLevel(int, Enum):
-    """
-    An explicit, typed model representing PSR-3 severity thresholds.
-    """
+    """An explicit, typed model representing PSR-3 severity thresholds."""
     DEBUG = 1
     INFO = 2
     NOTICE = 3
@@ -28,7 +26,8 @@ class LogLevel(int, Enum):
 
 
 class Logger:
-    """
+    """Diagnostic logging class.
+
     Responsible for evaluating, formatting, and routing operational system messages
     to terminal screens and file systems based on PSR-3 severity tiers.
     """
@@ -51,8 +50,7 @@ class Logger:
         log_file: Path | None = None,
         min_file_level: str = "debug",
     ) -> None:
-        """
-        Initializes the diagnostic logging service engine.
+        """Initializes the diagnostic logging service engine.
 
         Args:
             min_terminal_level (str): Minimum PSR-3 level required to display on console.

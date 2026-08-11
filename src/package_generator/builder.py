@@ -1,6 +1,6 @@
-"""
-package_generator.builder
-=========================
+# src/package_generator/builder.py
+"""Builds and cleans the package files.
+
 Infrastructure coordination layer managing filesystem writes, directory tree
 orchestration, and package building workflows.
 """
@@ -12,13 +12,13 @@ from .models import PackageConfig
 
 
 class DebianPackageBuilder:
-    """
-    Responsible for coordinating physical filesystem actions, template compilation,
-    and directory layout preparation for individual packages.
+    """Facilitates the construction of repository packages.
+
+    Coordinates filesystem actions, template compilation, and directory layout preparation for
+    individual packages.
     """
     def __init__(self, sources_dir: Path) -> None:
-        """
-        Initializes the package builder with standard target directory context.
+        """Initializes the package builder with standard target directory context.
 
         Args:
             sources_dir (Path): The root workspace container folder where package
@@ -27,7 +27,8 @@ class DebianPackageBuilder:
         self._sources_dir = sources_dir
 
     def create_package_tree(self, config: PackageConfig) -> Path:
-        """
+        """Builds the package tree.
+
         Creates a clean, isolated source workspace matching the package name schema
         and ensures the critical 'debian/' directory container exists.
 
@@ -48,7 +49,8 @@ class DebianPackageBuilder:
         return target_debian_dir
 
     def remove_package_tree(self) -> None:
-        """
+        """Cleans the package tree.
+
         Safely removes the targeted sources directory tree from the filesystem platter
         if it exists. Handles directories containing files and nested sub-folders.
         """
