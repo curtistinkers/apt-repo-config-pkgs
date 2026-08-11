@@ -51,21 +51,24 @@ def test_builder_successfully_removes_sources_directory_tree(tmp_path: Path) -> 
     directory tree structure from the filesystem.
     """
     # 1. SETUP: Create a real temporary folder structure to be deleted
-    mock_sources_dir = tmp_path / "dpkg-sources"
-    mock_package_dir = mock_sources_dir / "test-repo" / "debian"
-    mock_package_dir.mkdir(parents=True)
+    sources_dir = tmp_path / "dpkg-sources"
+    package_dir = sources_dir / "test-repo" / "debian"
+    package_dir.mkdir(parents=True)
 
     # Write a dummy file inside it to ensure the builder handles non-empty folders
-    (mock_package_dir / "dummy_file.txt").write_text("hello", encoding="utf-8")
+    (package_dir / "dummy_file.txt").write_text("hello", encoding="utf-8")
 
-    # Instantiate our infrastructure builder targeting this sandbox folder
-    builder = DebianPackageBuilder(sources_dir=mock_sources_dir)
+    # Initialize a real logger, configured to be completely quiet during our test run
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # Instantiate our new infrastructure builder class
+    builder = DebianPackageBuilder(sources_dir=sources_dir, logger=silent_logger)
 
     # Double-check that our setup worked and the path physically exists before cleaning
-    assert mock_sources_dir.exists()
+    assert sources_dir.exists()
 
     # 2. EXECUTION: Run the upcoming cleanup method
     builder.remove_package_tree()
 
     # 3. ASSERTION: The entire directory tree must be completely purged from disk
-    assert not mock_sources_dir.exists(), "The builder failed to delete the target directory tree."
+    assert not sources_dir.exists(), "The builder failed to delete the target directory tree."
