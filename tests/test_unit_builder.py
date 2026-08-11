@@ -20,16 +20,22 @@ def test_builder_orchestrates_clean_package_directory_tree(
 
     Ensures that DebianPackageBuilder uses a PackageConfig to create
     debian/ source directories on disk.
+
+    Args:
+        tmp_path (Path): A built-in pytest fixture providing a temporary directory path.
+        manifest_v1 (str): A test fixture providing a valid raw manifest YAML string.
     """
-    # 1. SETUP: Prepare our inputs and output paths in our sandbox
+    # Prepare our inputs and output paths in our sandbox
     raw_data = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_data)
+
+    # Initialize a real logger, configured to be completely quiet
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # Pass the required silent_logger into the RepositoryManifest constructor
+    manifest = RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
     # Define our temporary sources sandbox output folder
     sources_dir = tmp_path / "dpkg-sources"
-
-    # Initialize a real logger, configured to be completely quiet during our test run
-    silent_logger = Logger(min_terminal_level="emergency")
 
     # Instantiate our new infrastructure builder class
     builder = DebianPackageBuilder(sources_dir=sources_dir, logger=silent_logger)
@@ -49,9 +55,13 @@ def test_builder_successfully_removes_sources_directory_tree(tmp_path: Path) -> 
 
     Ensures that the package builder can safely delete an entire generated
     directory tree structure from the filesystem.
+
+    Args:
+        tmp_path (Path): A built-in pytest fixture providing a temporary directory path.
     """
-    # 1. SETUP: Create a real temporary folder structure to be deleted
+    # Create a real temporary folder structure to be deleted
     sources_dir = tmp_path / "dpkg-sources"
+    sources_dir.mkdir(parents=True)
     package_dir = sources_dir / "test-repo" / "debian"
     package_dir.mkdir(parents=True)
 
