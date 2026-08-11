@@ -1,5 +1,5 @@
 # tests/test_functional_cli.py
-"""Functional integration tests for CLI.
+"""Functional command-line interface tests.
 
 End-to-end functional integration specifications verifying CLI command
 orchestration, argument parsing, and system directory compilation.
@@ -14,17 +14,14 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     tmp_path: Path,
     manifest_v1: str
 ) -> None:
-    """Verifies the build subcommand.
+    """Verifies that executing the build subcommand creates directories on disk.
 
-    Verifies that executing the 'build' subcommand via the CLI runner:
-    1. Successfully parses directory arguments and the --debug flag.
-    2. Validates and compiles raw manifest data models.
-    3. Physically orchestrates the target package directory tree on disk.
+    Ensures that argument parsing, schema verification, and directory
+    orchestration layers function collectively during a system build pass.
     """
     # 1. SETUP: Establish physical input and output directory structures in our sandbox
     manifests_dir = tmp_path / "manifests"
     sources_dir = tmp_path / "sources"
-
     manifests_dir.mkdir(parents=True)
 
     # Write our perfect manifest fixture directly onto the disk platter
@@ -43,11 +40,12 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     ])
 
     # 3. CONSOLE OUTPUT ASSERTIONS
-    assert result.exit_code == 0, f"CLI pipeline crashed with console logs: {result.output}"
+    assert result.exit_code == 0, f"CLI pipeline crashed with logs: {result.output}"
     assert "DEBUG: Initializing execution environment" in result.output
-    assert "Successfully processed package manifest: test-repo" in result.output
+    # FIX: Synchronize assertion text to look for our new PSR-3 string token formats exactly
+    assert "INFO: Successfully orchestrated debian/" in result.output
 
-    # 4. FILESYSTEM ARCHITECTURE ASSERTIONS: Prove the objects collaborated to write disk paths
+    # 4. FILESYSTEM ARCHITECTURE ASSERTIONS
     expected_debian_dir = sources_dir / "test-repo" / "debian"
-    assert expected_debian_dir.exists(), "The end-to-end CLI run failed to create the target directories."
+    assert expected_debian_dir.exists(), "The build run failed to create directories."
     assert expected_debian_dir.is_dir()
