@@ -12,7 +12,8 @@ from click.testing import CliRunner
 
 def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     tmp_path: Path,
-    manifest_v1: str
+    manifest_v1: str,
+    project_config: str,
 ) -> None:
     """Verifies that executing the build subcommand creates directories on disk.
 
@@ -22,23 +23,33 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     Args:
         tmp_path: A built-in pytest fixture providing a temporary directory path.
         manifest_v1: A test fixture providing a valid raw manifest YAML string.
+        project_config: A test fixture providing a valid raw project YAML string.
     """
-    # 1. SETUP: Establish physical input and output directory structures in our sandbox
+    # Establish physical input and output directory structures in our sandbox
     manifests_dir = tmp_path / "manifests"
     sources_dir = tmp_path / "sources"
     manifests_dir.mkdir(parents=True)
+
+    # Define and write your global project configuration file to the sandbox
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
 
     # Write our perfect manifest fixture directly onto the disk platter
     manifest_file = manifests_dir / "test-repo.yaml"
     manifest_file.write_text(manifest_v1, encoding="utf-8")
 
-    # 2. EXECUTION: Import our CLI entrypoint and trigger the runner invocation
+    # Import our CLI entrypoint and trigger the runner invocation
     from package_generator.cli import main_cli
     runner = CliRunner()
 
+    # Locate our real repository template directories root safely
+    real_templates_root = Path(__file__).parents[1] / "templates"
+
     result = runner.invoke(main_cli, [
         "build",
+        "--project-config", str(project_file),
         "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(real_templates_root),
         "--sources-dir", str(sources_dir),
         "--debug"
     ])
@@ -46,7 +57,6 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     # 3. CONSOLE OUTPUT ASSERTIONS
     assert result.exit_code == 0, f"CLI pipeline crashed with logs: {result.output}"
     assert "DEBUG: Initializing execution environment" in result.output
-    # FIX: Synchronize assertion text to look for our new PSR-3 string token formats exactly
     assert "INFO: Successfully orchestrated debian/" in result.output
 
     # 4. FILESYSTEM ARCHITECTURE ASSERTIONS
