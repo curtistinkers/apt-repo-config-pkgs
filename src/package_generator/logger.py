@@ -5,9 +5,11 @@ An object-oriented diagnostic logger implementing a clean PSR-3 interface contra
 Handles rich color console filtering and explicit uncolored file routing.
 """
 
+import sys
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Dict
+from typing import ClassVar
+
 import click
 
 
@@ -32,7 +34,7 @@ class Logger:
     """
 
     # Internal translation look-up map converting user strings to LogLevel Enum models
-    _STRING_TO_LEVEL: Dict[str, LogLevel] = {
+    _STRING_TO_LEVEL: ClassVar[dict[str, LogLevel]] = {
         "debug": LogLevel.DEBUG,
         "info": LogLevel.INFO,
         "notice": LogLevel.NOTICE,
@@ -46,7 +48,7 @@ class Logger:
     def __init__(
         self,
         min_terminal_level: str = "info",
-        log_file: Optional[Path] = None,
+        log_file: Path | None = None,
         min_file_level: str = "debug",
     ) -> None:
         """
@@ -61,7 +63,13 @@ class Logger:
         self._log_file = log_file
         self._min_file_level = self._STRING_TO_LEVEL.get(min_file_level.lower(), LogLevel.DEBUG)
 
-    def _log_message(self, level_enum: LogLevel, message: str, color: str, use_stderr: bool) -> None:
+    def _log_message(
+        self,
+        level_enum: LogLevel,
+        message: str,
+        color: str,
+        use_stderr: bool
+    ) -> None:
         """Core internal routing mechanism parsing line statements across active targets."""
         formatted_payload = f"{level_enum.name}: {message}"
 
@@ -72,13 +80,16 @@ class Logger:
         # 2. THE FILE GATE: Independently evaluate and append plain text to the disk ledger
         if self._log_file and level_enum >= self._min_file_level:
             try:
-                # Ensure parent directory layers exist before appending to file
                 self._log_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(self._log_file, "a", encoding="utf-8") as file_stream:
                     file_stream.write(f"{formatted_payload}\n")
-            except Exception:
-                # Silently drop filesystem telemetry issues to protect the build run loop
-                pass
+            except OSError as error:
+                # FIX: Swapped out blind Exception and pass. Explicitly captures file/IO faults
+                # and prints an uncolored diagnostic note directly to stderr without crashing.
+                print(
+                    f"CRITICAL: Diagnostic Logger filesystem write failure: {error}",
+                    file=sys.stderr
+                )
 
     # ==============================================================================
     # EXPLICIT PSR-3 STRUCTURAL CONTRACT METHODS
