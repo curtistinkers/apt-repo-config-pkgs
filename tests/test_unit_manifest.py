@@ -1,6 +1,10 @@
+# tests/test_unit_manifest.py
+"""RepositoryManifest unit tests."""
+
 import pytest
 import yaml
-from package_generator import RepositoryManifest
+
+from package_generator import Logger, RepositoryManifest
 
 
 @pytest.mark.parametrize(
@@ -17,9 +21,12 @@ def test_manifest_invalid_schema_fixture_fails_validation(
     missing_key: str,
     expected_error: str
 ) -> None:
-    """
+    """Verifies manifest schema failures using the invalid layout fixture.
+
     Verifies that the RepositoryManifest validator catches every missing
     mandatory field inside the manifest_invalid_schema fixture.
+
+    TODO: Add Args
     """
     raw_data = yaml.safe_load(manifest_invalid_schema)
 
@@ -33,22 +40,32 @@ def test_manifest_invalid_schema_fixture_fails_validation(
         raw_data["repo"]["components"] = "main"
         raw_data["repo"]["key_url"] = "https://example.com"
 
+    # Initialize a real, quiet logger dependency
+    silent_logger = Logger(min_terminal_level="emergency")
+
     with pytest.raises(ValueError) as error_context:
-        RepositoryManifest(raw_data=raw_data)
+        RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
     assert expected_error in str(error_context.value)
 
 
 def test_repository_manifest_compiles_valid_dvo_hierarchy(manifest_v1: str) -> None:
-    """
+    """TODO: Needs a single-line description.
+
     Verifies that the RepositoryManifest validator accepts a complete configuration,
     executes all schema checks, and compiles a nested, type-safe PackageConfig DVO.
+
+    Args:
+        manifest_v1 (str): A test fixture providing a valid raw manifest YAML string.
     """
-    # 1. SETUP: Safely parse our raw YAML string fixture into a primitive dictionary
+    # Safely parse our raw YAML string fixture into a primitive dictionary
     raw_input_data = yaml.safe_load(manifest_v1)
 
-    # 2. EXECUTION: Instantiating the manifest drives coverage down the compilation loops
-    manifest = RepositoryManifest(raw_data=raw_input_data)
+    # Initialize a real, quiet logger dependency
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # Instantiating the manifest drives coverage down the compilation loops
+    manifest = RepositoryManifest(raw_data=raw_input_data, logger=silent_logger)
 
     # 3. COMPREHENSIVE VALUATION ASSERTIONS: Verify all data fields mapped cleanly
     assert manifest.config.name == "test-repo"
@@ -77,31 +94,56 @@ def test_repository_manifest_compiles_valid_dvo_hierarchy(manifest_v1: str) -> N
 
 
 def test_manifest_rejects_non_dictionary_repo_block(manifest_invalid_repo_type: str) -> None:
-    """Verifies that the validator catches a 'repo' key declared as a flat string type."""
+    """Verifies the validator catches a 'repo' key declared as a flat string type.
+
+    Args:
+        manifest_invalid_repo_type (str): A test fixture providing an invalid manifest YAML string.
+    """
     raw_data = yaml.safe_load(manifest_invalid_repo_type)
 
+    # Initialize a real, quiet logger dependency
+    silent_logger = Logger(min_terminal_level="emergency")
+
     with pytest.raises(ValueError) as error_context:
-        RepositoryManifest(raw_data=raw_data)
+        RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
     assert "Mandatory child block 'repo' is missing or invalid" in str(error_context.value)
 
 
 def test_manifest_rejects_non_list_os_mappings_block(manifest_invalid_mappings_type: str) -> None:
-    """Verifies that the validator catches an 'os_mappings' key declared as a flat string type."""
+    """Verifies the validator catches an 'os_mappings' key declared as a flat string type.
+
+    Args:
+        manifest_invalid_mappings_type (str): A test fixture providing an invalid manifest
+            YAML string.
+    """
     raw_data = yaml.safe_load(manifest_invalid_mappings_type)
 
+    # Initialize a real, quiet logger dependency
+    silent_logger = Logger(min_terminal_level="emergency")
+
     with pytest.raises(ValueError) as error_context:
-        RepositoryManifest(raw_data=raw_data)
+        RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
     assert "'os_mappings' must be a valid array list structure" in str(error_context.value)
 
 
-def test_manifest_rejects_non_dictionary_os_mapping_item(manifest_invalid_mapping_item_type: str) -> None:
-    """Verifies that the validator catches an individual os_mappings item formatted as a flat string."""
+def test_manifest_rejects_non_dictionary_os_mapping_item(
+    manifest_invalid_mapping_item_type: str
+) -> None:
+    """Verifies the validator catches an individual os_mappings item formatted as a flat string.
+
+    Args:
+        manifest_invalid_mapping_item_type (str): A test fixture providing an invalid manifest
+            YAML string.
+    """
     raw_data = yaml.safe_load(manifest_invalid_mapping_item_type)
 
+    # Initialize a real, quiet logger dependency
+    silent_logger = Logger(min_terminal_level="emergency")
+
     with pytest.raises(ValueError) as error_context:
-        RepositoryManifest(raw_data=raw_data)
+        RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
     assert "must be a dictionary" in str(error_context.value)
 
