@@ -44,8 +44,16 @@ def test_logger_psr3_methods_respect_terminal_thresholds(
     message: str,
     should_print_to_console: bool
 ) -> None:
-    """Verifies that all 8 standard PSR-3 interface methods exist and are
+    """Verifies terminal logging severity threshold filtering.
+
+    Verifies that all 8 standard PSR-3 interface methods exist and are
     correctly filtered or displayed based on the terminal threshold settings.
+
+    Args:
+        capsys: A built-in pytest fixture for capturing standard output streams.
+        method_name: The string name of the PSR-3 logging method to call.
+        message: The actual log string text payload passed to the method.
+        should_print_to_console: True if the message should clear filters.
     """
     # 1. SETUP: Initialize a logger with a 'warning' minimum threshold level.
     # This means debug, info, and notice must be skipped, while warning and above print.
@@ -73,8 +81,13 @@ def test_logger_psr3_methods_respect_terminal_thresholds(
         )
 
 def test_logger_silently_drops_filesystem_write_exceptions(tmp_path: Path) -> None:
-    """Verifies that the Logger service catches and silently handles filesystem
+    """Verifies defensive error handling during filesystem write failures.
+
+    Verifies that the Logger service catches and silently handles filesystem
     write exceptions without crashing the primary execution sequence thread.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
     """
     target_log_file = tmp_path / "faulty_device.log"
 
@@ -98,8 +111,13 @@ def test_logger_silently_drops_filesystem_write_exceptions(tmp_path: Path) -> No
 def test_logger_successfully_writes_uncolored_psr3_entries_to_healthy_file(
     tmp_path: Path
 ) -> None:
-    """Verifies that the Logger successfully executes the write command line path
-    when routed to a healthy, writable destination on the filesystem platter.
+    """Verifies positive file logging on a healthy write pipeline path.
+
+    Verifies that the Logger successfully executes the write command line path
+    when routed to a healthy, writable destination on the filesystem.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
     """
     # 1. SETUP: Create a real log file path in our temporary test sandbox folder
     healthy_log_file = tmp_path / "healthy_build_run.log"

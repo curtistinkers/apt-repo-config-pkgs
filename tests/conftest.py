@@ -111,7 +111,7 @@ def changelog_v2(changelog_v1: str) -> str:
     stacks the previous v1 release text block chronologically at the bottom.
 
     Args:
-        changelog_v1 (str): The initial Genesis version changelog string asset.
+        changelog_v1: The initial Genesis version changelog string asset.
 
     Returns:
         str: A multi-block changelog string tracking versions 1.0.1 and 1.0.0.
@@ -164,10 +164,10 @@ def changelog_v3(changelog_v2: str) -> str:
     of the deleted rule, ensuring index stability across future updates.
 
     Args:
-        changelog_v2 (str): The cumulative historical v2 version changelog string asset.
+        changelog_v2: The cumulative historical v2 version changelog string asset.
 
     Returns:
-        str: A multi-block changelog string tracking versions 1.0.2, 1.0.1, and 1.0.0.
+        A multi-block changelog string tracking versions 1.0.2, 1.0.1, and 1.0.0.
     """
     return f"""test-repo (1.0.2) stable; urgency=medium
 

@@ -43,7 +43,7 @@ def main_cli() -> None:
 )
 def build_packages_command(manifests_dir: Path, sources_dir: Path, debug: bool) -> None:
     """Scans your manifests directory and orchestrates Debian package folders."""
-    # 1. Initialize the Logger service dynamically based on the debug flag
+    # Initialize the Logger service dynamically based on the debug flag
     log_level = "debug" if debug else "info"
     logger = Logger(min_terminal_level=log_level)
 
@@ -51,7 +51,7 @@ def build_packages_command(manifests_dir: Path, sources_dir: Path, debug: bool) 
     logger.debug(f"Reading inputs from directory: {manifests_dir}")
     logger.debug(f"Targeting outputs to directory: {sources_dir}")
 
-    # 2. Inject the logger instance straight into the builder constructor
+    # Inject the logger instance straight into the builder constructor
     builder = DebianPackageBuilder(sources_dir=sources_dir, logger=logger)
     processed_count = 0
 
@@ -63,7 +63,7 @@ def build_packages_command(manifests_dir: Path, sources_dir: Path, debug: bool) 
                 with open(item, encoding="utf-8") as file_stream:
                     raw_yaml_data = yaml.safe_load(file_stream)
 
-                manifest = RepositoryManifest(raw_data=raw_yaml_data)
+                manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
 
                 # The builder uses the injected logger internally to report success notes
                 builder.create_package_tree(manifest.config)

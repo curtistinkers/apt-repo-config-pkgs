@@ -22,8 +22,8 @@ def test_builder_orchestrates_clean_package_directory_tree(
     debian/ source directories on disk.
 
     Args:
-        tmp_path (Path): A built-in pytest fixture providing a temporary directory path.
-        manifest_v1 (str): A test fixture providing a valid raw manifest YAML string.
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
     """
     # Prepare our inputs and output paths in our sandbox
     raw_data = yaml.safe_load(manifest_v1)
@@ -57,7 +57,7 @@ def test_builder_successfully_removes_sources_directory_tree(tmp_path: Path) -> 
     directory tree structure from the filesystem.
 
     Args:
-        tmp_path (Path): A built-in pytest fixture providing a temporary directory path.
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
     """
     # Create a real temporary folder structure to be deleted
     sources_dir = tmp_path / "dpkg-sources"

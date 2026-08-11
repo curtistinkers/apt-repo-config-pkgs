@@ -53,9 +53,9 @@ class Logger:
         """Initializes the diagnostic logging service engine.
 
         Args:
-            min_terminal_level (str): Minimum PSR-3 level required to display on console.
-            log_file (Optional[Path]): Optional file path target to mirror text records.
-            min_file_level (str): Minimum PSR-3 level required to save inside the file.
+            min_terminal_level: Minimum PSR-3 level required to display on console.
+            log_file: Optional file path target to mirror text records.
+            min_file_level: Minimum PSR-3 level required to save inside the file.
         """
         self._min_term_level = self._STRING_TO_LEVEL.get(min_terminal_level.lower(), LogLevel.INFO)
         self._log_file = log_file

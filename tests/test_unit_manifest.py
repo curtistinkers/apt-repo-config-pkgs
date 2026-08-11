@@ -26,7 +26,10 @@ def test_manifest_invalid_schema_fixture_fails_validation(
     Verifies that the RepositoryManifest validator catches every missing
     mandatory field inside the manifest_invalid_schema fixture.
 
-    TODO: Add Args
+    Args:
+        manifest_invalid_schema: A test fixture providing a broken YAML string.
+        missing_key: The string name of the configuration key being omitted.
+        expected_error: The literal warning string expected in the ValueError.
     """
     raw_data = yaml.safe_load(manifest_invalid_schema)
 
@@ -50,13 +53,13 @@ def test_manifest_invalid_schema_fixture_fails_validation(
 
 
 def test_repository_manifest_compiles_valid_dvo_hierarchy(manifest_v1: str) -> None:
-    """TODO: Needs a single-line description.
+    """Verifies that a valid manifest parses into a clean DVO tree hierarchy.
 
     Verifies that the RepositoryManifest validator accepts a complete configuration,
     executes all schema checks, and compiles a nested, type-safe PackageConfig DVO.
 
     Args:
-        manifest_v1 (str): A test fixture providing a valid raw manifest YAML string.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
     """
     # Safely parse our raw YAML string fixture into a primitive dictionary
     raw_input_data = yaml.safe_load(manifest_v1)
@@ -97,7 +100,7 @@ def test_manifest_rejects_non_dictionary_repo_block(manifest_invalid_repo_type: 
     """Verifies the validator catches a 'repo' key declared as a flat string type.
 
     Args:
-        manifest_invalid_repo_type (str): A test fixture providing an invalid manifest YAML string.
+        manifest_invalid_repo_type: A test fixture providing an invalid manifest YAML string.
     """
     raw_data = yaml.safe_load(manifest_invalid_repo_type)
 
@@ -114,7 +117,7 @@ def test_manifest_rejects_non_list_os_mappings_block(manifest_invalid_mappings_t
     """Verifies the validator catches an 'os_mappings' key declared as a flat string type.
 
     Args:
-        manifest_invalid_mappings_type (str): A test fixture providing an invalid manifest
+        manifest_invalid_mappings_type: A test fixture providing an invalid manifest
             YAML string.
     """
     raw_data = yaml.safe_load(manifest_invalid_mappings_type)
@@ -134,7 +137,7 @@ def test_manifest_rejects_non_dictionary_os_mapping_item(
     """Verifies the validator catches an individual os_mappings item formatted as a flat string.
 
     Args:
-        manifest_invalid_mapping_item_type (str): A test fixture providing an invalid manifest
+        manifest_invalid_mapping_item_type: A test fixture providing an invalid manifest
             YAML string.
     """
     raw_data = yaml.safe_load(manifest_invalid_mapping_item_type)

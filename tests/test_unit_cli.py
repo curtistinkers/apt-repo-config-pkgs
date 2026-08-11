@@ -54,6 +54,10 @@ def test_unit_cli_build_subcommand_gracefully_handles_corrupted_syntax_files(
 
     Ensures that encountering a completely corrupted file results in an
     emergency error trace and an exit code 1 status response.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_corrupted_garbage_syntax: Test fixture containing invalid YAML syntax text.
     """
     # 1. SETUP: Create input paths and write un-parseable file text directly to disk
     manifests_dir = tmp_path / "manifests"

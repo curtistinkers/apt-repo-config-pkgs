@@ -20,8 +20,8 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     orchestration layers function collectively during a system build pass.
 
     Args:
-        tmp_path (Path): A built-in pytest fixture providing a temporary directory path.
-        manifest_v1 (str): A test fixture providing a valid raw manifest YAML string.
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
     """
     # 1. SETUP: Establish physical input and output directory structures in our sandbox
     manifests_dir = tmp_path / "manifests"
