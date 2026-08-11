@@ -6,7 +6,7 @@ Pure, immutable Data Value Objects representing our package and project paramete
 """
 
 from dataclasses import dataclass, field
-from typing import List
+
 
 @dataclass(frozen=True)
 class ProjectConfig:
@@ -18,21 +18,6 @@ class ProjectConfig:
     maintainer_email: str
     copyright_holder: str
     repository_url: str
-
-
-@dataclass(frozen=True)
-class PackageConfig:
-    """
-    The master immutable Data Value Object representing the complete
-    configuration state of a repository manifest at a single point in time.
-    """
-    name: str
-    version: str
-    description: str
-    copyright_year: int
-    dynamic_keyring: bool
-    repo: PackageRepoConfig  # <-- Nested structured value object type-hint
-    os_mappings: List[PackageOSMappingConfig] = field(default_factory=list)  # <-- Strongly-typed collection
 
 
 @dataclass(frozen=True)
@@ -56,3 +41,18 @@ class PackageOSMappingConfig:
     match: str
     set_dist: str
     set_codename: str
+
+
+@dataclass(frozen=True)
+class PackageConfig:
+    """
+    The master immutable Data Value Object representing the complete
+    configuration state of a repository manifest at a single point in time.
+    """
+    name: str
+    version: str
+    description: str
+    copyright_year: int
+    dynamic_keyring: bool
+    repo: PackageRepoConfig  # <-- Nested structured value object type-hint
+    os_mappings: list[PackageOSMappingConfig] = field(default_factory=list)  # <-- Strongly-typed collection
