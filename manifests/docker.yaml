@@ -1,0 +1,16 @@
+name: docker
+description: "Configures the official Docker CE repository"
+version: 1.0.0
+copyright_year: 2026
+dynamic_keyring: true
+
+repo:
+  url: "https://docker.com/linux/${TARGET_DIST}"
+  suites: "${TARGET_CODENAME}"
+  components: "stable"
+  key_url: https://download.docker.com/linux/${TARGET_DIST}/gpg
+
+os_mappings:
+  - match: "pop|linuxmint|elementary"
+    set_dist: "ubuntu"
+    set_codename: "${UBUNTU_CODENAME}"

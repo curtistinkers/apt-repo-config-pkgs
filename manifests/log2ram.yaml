@@ -1,0 +1,11 @@
+name: log2ram
+description: Automatically configures the log2ram repository
+version: 1.0.0
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: http://packages.azlux.fr/debian/
+  suites: ${TARGET_CODENAME}
+  components: main
+  key_url: https://azlux.fr/repo.gpg

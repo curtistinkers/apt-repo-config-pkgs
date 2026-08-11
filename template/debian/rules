@@ -1,0 +1,6 @@
+#!/usr/bin/make -f
+
+# The '%' symbol acts as a wildcard catching all build stages (clean, build, binary).
+# 'dh $@' passes execution directly to Debhelper, automating the entire Debian lifecycle.
+%:
+	dh $@

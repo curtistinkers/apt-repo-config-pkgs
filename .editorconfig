@@ -1,0 +1,30 @@
+# http://editorconfig.org
+root = true
+
+# Global settings for all files
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+# Python files
+[*.py]
+indent_style = space
+indent_size = 4
+
+# YAML manifest configuration files
+[*.{yaml,yml}]
+indent_style = space
+indent_size = 2
+
+# Debian shell scripts and control files
+[template/debian/*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+
+[sources/debian/*]
+indent_style = space
+indent_size = 4
+end_of_line = lf

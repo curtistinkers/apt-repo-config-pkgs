@@ -1,0 +1,13 @@
+Source: {{ package_name }}-repo-config
+Section: utils
+Priority: optional
+Maintainer: {{ maintainer_name }} <{{ maintainer_email }}>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+
+Package: {{ package_name }}-repo-config
+Architecture: all
+Depends: ${misc:Depends}, curl, ca-certificates, gnupg
+Description: {{ short_description }}
+ This package automatically manages the APT repository configuration and
+ secure cryptographic keyrings for {{ package_name }}.
