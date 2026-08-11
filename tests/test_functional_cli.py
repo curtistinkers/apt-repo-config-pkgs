@@ -18,6 +18,10 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
 
     Ensures that argument parsing, schema verification, and directory
     orchestration layers function collectively during a system build pass.
+
+    Args:
+        tmp_path (Path): A built-in pytest fixture providing a temporary directory path.
+        manifest_v1 (str): A test fixture providing a valid raw manifest YAML string.
     """
     # 1. SETUP: Establish physical input and output directory structures in our sandbox
     manifests_dir = tmp_path / "manifests"
@@ -25,8 +29,8 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     manifests_dir.mkdir(parents=True)
 
     # Write our perfect manifest fixture directly onto the disk platter
-    sample_manifest_file = manifests_dir / "test-repo.yaml"
-    sample_manifest_file.write_text(manifest_v1, encoding="utf-8")
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
 
     # 2. EXECUTION: Import our CLI entrypoint and trigger the runner invocation
     from package_generator.cli import main_cli
@@ -48,4 +52,4 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     # 4. FILESYSTEM ARCHITECTURE ASSERTIONS
     expected_debian_dir = sources_dir / "test-repo" / "debian"
     assert expected_debian_dir.exists(), "The build run failed to create directories."
-    assert expected_debian_dir.is_dir()
+    assert expected_debian_dir.is_dir(), "The target destination path is not a valid directory."
