@@ -1,7 +1,101 @@
+[project]
+name = "deb-repo-config-packages"
+# version = "1.0.0"
+description = "Generates installable .deb packages for repositories using YAML manifest files."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "curtistinkers", email = "curtistinkers@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+# Core production dependencies
+dependencies = [
+    "pyyaml>=6.0",
+    "jinja2>=3.1",
+    "requests>=2.31",
+    "click>=8.4.2",
+]
+
+[project.optional-dependencies]
+# Extra dependencies for development environments
+dev = [
+    "pytest>=9.1.1",
+    "pytest_cov>=7.1.0",
+    "ruff>=0.16.2",
+]
+
+[project.scripts]
+package-generator = "package_generator.cli:main_cli"
+
+[project.urls]
+# Essential project documentation links
+Homepage = "https://github.com/curtistinkers/deb-repo-config-packages"
+Documentation = "https://github.com/curtistinkers/deb-repo-config-packages#readme"
+
 [tool.pytest.ini_options]
+# Testing environment rules
+testpaths = ["tests"]
+python_files = ["test_*.py"]
 # Automatically instructs pytest to include 'src/' in the system search path
 pythonpath = ["src"]
-
 # --cov=package_generator tells the tool to strictly measure your source directory package
 # --cov-report=term-missing prints a clean percentage table in your terminal showing missing line numbers
 addopts = "--cov=package_generator --cov-report=term-missing"
+
+[tool.ruff]
+# Target Python version (e.g., "py310", "py311", "py312")
+target-version = "py311"
+# Max line length for both the linter and formatter
+line-length = 100
+# Directories to entirely ignore during analysis
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",
+    "__pycache__",
+    ".pytest_cache",
+    ".vscode",
+]
+
+[tool.ruff.lint]
+# Rules to explicitly enable (Pyflakes, Pycodestyle, Isort, Upgrade)
+select = [
+    "F",   # Pyflakes (core errors)
+    "E",   # Pycodestyle Errors
+    "W",   # Pycodestyle Warnings
+    "I",   # Isort (import sorting auto-fixes)
+    "UP",  # Pyupgrade (modernize syntax)
+    "B",   # Flake8-bugbear (likely design flaws)
+    "C4",  # Flake8-comprehensions (better list/dict construction)
+    "D",   # Pydocstyle (Enables all docstring linting)
+    "ARG", # Flake8-unused-arguments (Crucial for Click)
+]
+
+# Allow unused imports or variables only in specific files (e.g., __init__.py)
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.pydocstyle]
+# Force Ruff to validate against Google Style Guide rules
+convention = "google"
+
+[tool.ruff.lint.isort]
+# Ensure groups of imports are separated by empty lines
+lines-after-imports = 2
+
+[tool.ruff.format]
+# Use spaces instead of tabs for formatting
+indent-style = "space"
+# Enforce double quotes everywhere
+quote-style = "double"
+# Format code blocks inside your markdown documentation
+docstring-code-format = true
