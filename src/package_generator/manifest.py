@@ -5,7 +5,7 @@ package_generator.manifest
 Input validator layer parsing raw dictionary inputs into strongly typed DVOs.
 """
 
-from .models import PackageConfig, PackageRepoConfig, PackageOSMappingConfig
+from .models import PackageConfig, PackageOSMappingConfig, PackageRepoConfig
 
 
 class RepositoryManifest:

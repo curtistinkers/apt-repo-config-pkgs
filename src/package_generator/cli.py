@@ -5,13 +5,14 @@ Command-line interface specification layer. Maps incoming terminal arguments,
 subcommands, and debug flags to core business logic orchestration layers.
 """
 
-from pathlib import Path
 import sys
-import yaml
-import click
+from pathlib import Path
 
-from .manifest import RepositoryManifest
+import click
+import yaml
+
 from .builder import DebianPackageBuilder
+from .manifest import RepositoryManifest
 
 
 @click.group()
