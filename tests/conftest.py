@@ -14,6 +14,28 @@ import pytest
 # from the root folder where our main generation engine will live.
 sys.path.insert(0, ".")
 
+
+@pytest.fixture
+def project_config() -> str:
+    """Provides a valid raw global project configuration YAML text string.
+
+    Returns:
+        A multiline YAML string representing a project config file.
+    """
+    return """maintainer_name: "Alice"
+maintainer_email: "alice@example.com"
+copyright_holder: "Alice"
+repository_url: "https://git.example.com/alice/deb-repo-config-packages"
+"""
+
+@pytest.fixture
+def project_config_multiple_missing() -> str:
+    """Provides an invalid raw project configuration missing maintainer_name and repository_url."""
+    return """maintainer_email: "bob@example.com"
+copyright_holder: "Bob"
+"""
+
+
 @pytest.fixture
 def manifest_v1() -> str:
     """Complete mock YAML configuration.
@@ -22,7 +44,7 @@ def manifest_v1() -> str:
     configuration file for testing processors.
 
     Returns:
-        str: A raw, multiline YAML string representing a standard repository.
+        A multiline YAML string representing a standard manifest.
     """
     return """name: test-repo
 version: 1.0.0
