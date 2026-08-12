@@ -1,0 +1,67 @@
+#!/bin/sh
+# =============================================================================
+# Debian Post-Removal Script (postrm)
+# Guarantees the dynamic repo file is dropped to keep system APT layouts clean.
+# =============================================================================
+set -e
+
+# -----------------------------------------------------------------------------
+# DEBUG MODE TOGGLE
+# Change to "true" to print extensive step-by-step diagnostic trace statements.
+# -----------------------------------------------------------------------------
+DEBUG="true"
+
+# -----------------------------------------------------------------------------
+# FUNCTION: log_debug()
+# Prints detailed runtime information if DEBUG mode is enabled.
+# -----------------------------------------------------------------------------
+log_debug() {
+    if [ "${DEBUG}" = "true" ]; then
+        echo "[DEBUG-TRACE] $1"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# FUNCTION: purge_repository_configuration()
+# Explicitly deletes the dynamic .sources target file from the system folder.
+# -----------------------------------------------------------------------------
+purge_repository_configuration() {
+    TARGET_FILE="/etc/apt/sources.list.d/curtistinkers.sources"
+
+    if [ -f "${TARGET_FILE}" ]; then
+        log_debug "Removing orphan repository configuration file: ${TARGET_FILE}"
+        rm -f "${TARGET_FILE}"
+    else
+        log_debug "Cleanup skipped: file ${TARGET_FILE} does not exist."
+    fi
+}
+
+
+
+
+# -----------------------------------------------------------------------------
+# FUNCTION: main()
+# Runs the core application logic
+# -----------------------------------------------------------------------------
+main() {
+
+    # Wipe the file during standard removals or explicit system purging loops
+    if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+        log_debug "Executing postrm cleanup logic for package: curtistinkers"
+        purge_repository_configuration
+        
+        
+        
+        log_debug "Cleanup process wrapped up successfully."
+    else
+        log_debug "Skipping cleanup execution: step state '$1' does not alter file allocations."
+    fi
+}
+
+# Pass all incoming command line execution arguments into the main controller
+main "$@"
+
+# DEBHELPER macro placeholder required for downstream package additions
+#DEBHELPER#
+
+exit 0
