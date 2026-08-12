@@ -10,6 +10,8 @@ from pathlib import Path
 
 from .changelog import Changelog
 from .compiler import DebianTemplateCompiler
+from .downloader import Downloader
+from .gpg import GpgEngine
 from .logger import Logger
 from .models import PackageConfig, ProjectConfig
 
@@ -22,6 +24,8 @@ class DebianPackageBuilder:
         sources_dir: Path,
         logger: "Logger",  # Using standard generic to prevent circular import layout paths
         compiler: DebianTemplateCompiler,
+        downloader: Downloader | None = None,
+        gpg_engine: GpgEngine | None = None,
     ) -> None:
         """Initializes the package builder service coordinator.
 
@@ -34,6 +38,8 @@ class DebianPackageBuilder:
         self._sources_dir = sources_dir
         self._logger = logger
         self._compiler = compiler
+        self._downloader = downloader if downloader is not None else Downloader(logger=logger)
+        self._gpg_engine = gpg_engine if gpg_engine is not None else GpgEngine(logger=logger)
 
     def create_package_tree(
         self,
@@ -88,7 +94,24 @@ class DebianPackageBuilder:
         with open(changelog_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
             file_stream.write(updated_changelog_content)
 
-                # 2. RENDER THE REST OF THE DEBIAN TEMPLATE PLATES POOL
+        if not config.dynamic_keyring:
+            self._logger.info(
+                f"Static keyring strategy verified for '{config.name}'. Extracting signing assets..."
+            )
+
+            raw_ascii_armor_text = self._downloader.download_text(url=config.repo.key_url)
+            binary_key_bytes = self._gpg_engine.dearmor(ascii_text=raw_ascii_armor_text)
+
+            keyrings_dir = target_debian_dir / "usr" / "share" / "keyrings"
+            keyrings_dir.mkdir(parents=True, exist_ok=True)
+
+            output_key_file = keyrings_dir / f"{config.name}-archive-keyring.gpg"
+            output_key_file.write_bytes(binary_key_bytes)
+            self._logger.debug(
+                f"Successfully recorded static binary signing asset on disk path: {output_key_file}"
+            )
+
+        # 2. RENDER THE REST OF THE DEBIAN TEMPLATE PLATES POOL
         self._logger.debug("Dynamically discovering available system template assets...")
         available_templates = self._compiler._env.list_templates()
 
