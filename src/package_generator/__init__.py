@@ -2,6 +2,7 @@
 """Core entry-point exposing public class structures."""
 
 from .builder import DebianPackageBuilder
+from .changelog import Changelog
 from .compiler import DebianTemplateCompiler
 from .logger import Logger
 from .models import PackageConfig, PackageOSMappingConfig, PackageRepoConfig, ProjectConfig
