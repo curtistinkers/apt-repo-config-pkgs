@@ -259,8 +259,8 @@ def test_cli_builds_rules_file(
     expected_text = (
         "#!/usr/bin/make -f\n"
         "\n"
-        "# The '%' symbol acts as a wildcard catching all build stages (clean, build, binary).\n"
-        "# 'dh $@' passes execution directly to Debhelper, automating the entire Debian lifecycle.\n"
+        "# The '%' symbol acts as a wildcard catching all build stages.\n"
+        "# 'dh $@' passes execution to Debhelper, automating the entire Debian lifecycle.\n"
         "%:\n"
         "\tdh $@"
     )
