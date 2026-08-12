@@ -5,6 +5,8 @@ Discrete unit specifications validating the Debian changelog lifecycle generatio
 state-driven diff calculations, and version history stacking.
 """
 
+from pathlib import Path
+
 import yaml
 
 from package_generator import Changelog, Logger, ProjectManifest, RepositoryManifest
@@ -203,3 +205,130 @@ def test_changelog_compiles_cumulative_history_from_v3_manifest(
     )
 
     assert compiled_output.strip() == changelog_v3.strip()
+
+def test_changelog_can_reconstruct_exact_manifest_v1_file(
+    tmp_path: Path,
+    changelog_v1: str,
+    manifest_v1: str,
+    mock_manifest_template: str,
+) -> None:
+    """Verifies that parsing changelog v1 reproduces manifest v1 exactly via template.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        changelog_v1: A test fixture providing the initial changelog text string.
+        manifest_v1: A test fixture providing the expected target YAML string.
+        mock_manifest_template: Blueprint layout matching manifest_v1 format.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+
+    # 1. Reverse-engineer the ledger back into a compiled PackageConfig DVO
+    reconstructed_config = changelog_engine.to_package_config()
+
+    # 2. Write our mock blueprint to a temporary sandbox directory layout path
+    sandbox_dir = tmp_path / "templates_v1"
+    sandbox_dir.mkdir()
+    template_file = sandbox_dir / "manifest_mock"
+    template_file.write_text(mock_manifest_template, encoding="utf-8")
+
+    # 3. Use our compiler to render the reconstructed DVO back into text layout rows
+    from package_generator.compiler import DebianTemplateCompiler
+    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
+
+    # Pass an empty ProjectConfig since this matching template only requests package attributes
+    from package_generator.models import ProjectConfig
+    dummy_proj = ProjectConfig(
+        maintainer_name="", maintainer_email="", copyright_holder="", repository_url=""
+    )
+
+    rendered_manifest = compiler.render_template(
+        template_name="manifest_mock",
+        package_config=reconstructed_config,
+        project_config=dummy_proj,
+    )
+
+    # 4. CLOSED-LOOP INVARIANT ASSERTION: Reconstructed YAML string must match origin exactly
+    assert rendered_manifest.strip() == manifest_v1.strip()
+
+
+def test_changelog_can_reconstruct_exact_manifest_v2_file(
+    tmp_path: Path,
+    changelog_v2: str,
+    manifest_v2: str,
+    mock_manifest_template: str,
+) -> None:
+    """Verifies that parsing changelog v2 reproduces manifest v2 exactly via template.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        changelog_v2: A test fixture providing the v2 delta changelog text string.
+        manifest_v2: A test fixture providing the expected target YAML string.
+        mock_manifest_template: Blueprint layout matching manifest_v1 format.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v2, logger=silent_logger)
+
+    reconstructed_config = changelog_engine.to_package_config()
+
+    sandbox_dir = tmp_path / "templates_v2"
+    sandbox_dir.mkdir()
+    template_file = sandbox_dir / "manifest_mock"
+    template_file.write_text(mock_manifest_template, encoding="utf-8")
+
+    from package_generator.compiler import DebianTemplateCompiler
+    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
+
+    from package_generator.models import ProjectConfig
+    dummy_proj = ProjectConfig(
+        maintainer_name="", maintainer_email="", copyright_holder="", repository_url=""
+    )
+
+    rendered_manifest = compiler.render_template(
+        template_name="manifest_mock",
+        package_config=reconstructed_config,
+        project_config=dummy_proj,
+    )
+
+    assert rendered_manifest.strip() == manifest_v2.strip()
+
+
+def test_changelog_can_reconstruct_exact_manifest_v3_file(
+    tmp_path: Path,
+    changelog_v3: str,
+    manifest_v3: str,
+    mock_manifest_template: str,
+) -> None:
+    """Verifies that parsing changelog v3 reproduces manifest v3 exactly via template.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        changelog_v3: A test fixture providing the cumulative v3 changelog text string.
+        manifest_v3: A test fixture providing the expected target YAML string.
+        mock_manifest_template: Blueprint layout matching manifest_v1 format.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v3, logger=silent_logger)
+
+    reconstructed_config = changelog_engine.to_package_config()
+
+    sandbox_dir = tmp_path / "templates_v3"
+    sandbox_dir.mkdir()
+    template_file = sandbox_dir / "manifest_mock"
+    template_file.write_text(mock_manifest_template, encoding="utf-8")
+
+    from package_generator.compiler import DebianTemplateCompiler
+    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
+
+    from package_generator.models import ProjectConfig
+    dummy_proj = ProjectConfig(
+        maintainer_name="", maintainer_email="", copyright_holder="", repository_url=""
+    )
+
+    rendered_manifest = compiler.render_template(
+        template_name="manifest_mock",
+        package_config=reconstructed_config,
+        project_config=dummy_proj,
+    )
+
+    assert rendered_manifest.strip() == manifest_v3.strip()
