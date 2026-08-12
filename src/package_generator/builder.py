@@ -79,8 +79,8 @@ class DebianPackageBuilder:
             # Safely create parent sub-folders if a multi-nested layout exists
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Physically write out the uncolored plain text stream onto your hard drive
-            with open(output_file_path, "w", encoding="utf-8") as file_writer:
+            # Physically write out the plain text stream onto your hard drive
+            with open(output_file_path, "w", encoding="utf-8", newline="\n") as file_writer:
                 file_writer.write(compiled_text_stream)
 
         self._logger.info(f"Successfully orchestrated debian/ container at: {target_debian_dir}")
