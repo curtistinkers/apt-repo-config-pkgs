@@ -74,6 +74,7 @@ def changelog_v1() -> str:
         str: A multiline string representing a changelog.
     """
     return """test-repo (1.0.0) stable; urgency=medium
+
   * Initial package definition established.
   * description=Test repository package layout configuration.
   * copyright_year=2024
@@ -89,7 +90,7 @@ def changelog_v1() -> str:
   * os_mappings.1.set_dist=debian
   * os_mappings.1.set_codename=${VERSION_CODENAME}
 
- -- Maintainer <test@example.com>  Mon, 10 Aug 2026 12:00:00 +0000
+ -- Alice <alice@example.com>  Mon, 10 Aug 2026 12:00:00 +0000
 """
 
 
@@ -145,7 +146,7 @@ def changelog_v2(changelog_v1: str) -> str:
   * Modified repo.url: https://v2.example.com
   * Modified repo.key_url: https://v2.example.com/signing.gpg
 
- -- Maintainer <test@example.com>  Mon, 10 Aug 2026 13:00:00 +0000
+ -- Alice <alice@example.com>  Mon, 10 Aug 2026 13:00:00 +0000
 
 {changelog_v1.strip()}
 """
@@ -197,7 +198,7 @@ def changelog_v3(changelog_v2: str) -> str:
   * Toggled repository keyring strategy to: dynamic
   * Removed os_mappings rule matching raspbian.
 
- -- Maintainer <test@example.com>  Mon, 10 Aug 2026 14:00:00 +0000
+ -- Alice <alice@example.com>  Mon, 10 Aug 2026 14:00:00 +0000
 
 {changelog_v2.strip()}
 """
