@@ -7,6 +7,7 @@ orchestration, argument parsing, and system directory compilation.
 
 from pathlib import Path
 
+import yaml
 from click.testing import CliRunner
 
 from package_generator.cli import main_cli
@@ -465,3 +466,150 @@ def test_cli_builds_os_normalization_rules(
     assert "raspbian)" in postinst_content
     assert 'TARGET_DIST="debian"' in postinst_content
     assert 'TARGET_CODENAME="${VERSION_CODENAME}"' in postinst_content
+
+
+def test_cli_prompts_and_skips_on_no_response(
+    tmp_path: Path,
+    manifest_v2: str,
+    project_config: str,
+    changelog_v2: str,
+) -> None:
+    """Verifies that selecting 'No' at the interactive prompt skips the package."""
+    runner = CliRunner()
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Write out a global project configuration file
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    # Seed the history tracking file so that version 1.0.1 is already written on disk
+    pkg_debian_dir = sources_dir / "test-repo" / "debian"
+    pkg_debian_dir.mkdir(parents=True)
+    (pkg_debian_dir / "changelog").write_text(changelog_v2, encoding="utf-8")
+
+    # Create an identical manifest version 1.0.1 file block, but modify its description
+    raw_manifest_data = yaml.safe_load(manifest_v2)
+    raw_manifest_data["description"] = "A brand new modified description text rule."
+
+    modified_manifest_file = manifests_dir / "test-repo.yaml"
+    modified_manifest_file.write_text(yaml.safe_dump(raw_manifest_data), encoding="utf-8")
+
+    real_templates_root = Path(__file__).parents[1] / "templates"
+
+    # EXECUTION: Trigger the build subcommand pass while feeding 'n' (No) into stdin
+    result = runner.invoke(
+        main_cli,
+        [
+            "build",
+            "--project-config", str(project_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(real_templates_root),
+            "--sources-dir", str(sources_dir),
+            "--debug"
+        ],
+        input="n\n"  # Simulate pressing No
+    )
+
+    # ASSERTIONS: The file must be skipped gracefully with a dedicated alert log message
+    assert result.exit_code == 0
+    assert "Manifest modified without version bump" in result.output
+    assert "ALERT: Skipping package file test-repo.yaml" in result.output
+
+
+def test_cli_auto_bumps_and_rewrites_manifest_on_yes_response(
+    tmp_path: Path,
+    manifest_v2: str,
+    project_config: str,
+    changelog_v2: str,
+) -> None:
+    """Verifies that selecting 'Yes' at the prompt auto-bumps and rewrites the yaml."""
+    runner = CliRunner()
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    pkg_debian_dir = sources_dir / "test-repo" / "debian"
+    pkg_debian_dir.mkdir(parents=True)
+    (pkg_debian_dir / "changelog").write_text(changelog_v2, encoding="utf-8")
+
+    raw_manifest_data = yaml.safe_load(manifest_v2)
+    raw_manifest_data["description"] = "A brand new modified description text rule."
+
+    modified_manifest_file = manifests_dir / "test-repo.yaml"
+    modified_manifest_file.write_text(yaml.safe_dump(raw_manifest_data), encoding="utf-8")
+
+    real_templates_root = Path(__file__).parents[1] / "templates"
+
+    # EXECUTION: Trigger the build subcommand pass while feeding 'y' (Yes) into stdin
+    result = runner.invoke(
+        main_cli,
+        [
+            "build",
+            "--project-config", str(project_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(real_templates_root),
+            "--sources-dir", str(sources_dir),
+            "--debug"
+        ],
+        input="y\n"  # Simulate pressing Yes
+    )
+
+    assert result.exit_code == 0
+    assert "Auto-bumping manifest file test-repo.yaml forward to v1.0.2" in result.output
+
+    # VERIFY DISK PERSISTENCE: Confirm the physical manifest file on disk was rewritten
+    updated_yaml_content = modified_manifest_file.read_text(encoding="utf-8")
+    assert "version: 1.0.2" in updated_yaml_content
+
+
+def test_cli_auto_bumps_natively_via_flag_option(
+    tmp_path: Path,
+    manifest_v2: str,
+    project_config: str,
+    changelog_v2: str,
+) -> None:
+    """Verifies that the --bump-version flag option auto-accepts without prompts."""
+    runner = CliRunner()
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    pkg_debian_dir = sources_dir / "test-repo" / "debian"
+    pkg_debian_dir.mkdir(parents=True)
+    (pkg_debian_dir / "changelog").write_text(changelog_v2, encoding="utf-8")
+
+    raw_manifest_data = yaml.safe_load(manifest_v2)
+    raw_manifest_data["description"] = "A brand new modified description text rule."
+
+    modified_manifest_file = manifests_dir / "test-repo.yaml"
+    modified_manifest_file.write_text(yaml.safe_dump(raw_manifest_data), encoding="utf-8")
+
+    real_templates_root = Path(__file__).parents[1] / "templates"
+
+    # EXECUTION: Trigger build with the explicit --bump-version flag option parameter active
+    result = runner.invoke(
+        main_cli,
+        [
+            "build",
+            "--project-config", str(project_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(real_templates_root),
+            "--sources-dir", str(sources_dir),
+            "--bump-version",  # Bypass prompts natively
+            "--debug"
+        ]
+    )
+
+    assert result.exit_code == 0
+    assert "Auto-bumping manifest file test-repo.yaml forward to v1.0.2" in result.output
+
+    updated_yaml_content = modified_manifest_file.read_text(encoding="utf-8")
+    assert "version: 1.0.2" in updated_yaml_content

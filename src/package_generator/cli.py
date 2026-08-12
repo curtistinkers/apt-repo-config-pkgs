@@ -54,12 +54,19 @@ def main_cli() -> None:
     default=False,
     help="Enables verbose debugging console outputs."
 )
+@click.option(
+    "--bump-version",
+    is_flag=True,
+    default=False,
+    help="TODO: Add help text."
+)
 def build_packages_command(
     project_config: Path,
     manifests_dir: Path,
     templates_dir: Path,
     sources_dir: Path,
-    debug: bool
+    debug: bool,
+    bump_version: bool,
 ) -> None:
     """Scans your manifests directory and orchestrates Debian package folders."""
     log_level = "debug" if debug else "info"
@@ -81,7 +88,7 @@ def build_packages_command(
         logger.emergency(f"Fatal validation failure inside global project config: {project_error}")
         sys.exit(1)
 
-    # FIX: Use the user-supplied templates directory path dynamically
+    # Use the user-supplied templates directory path dynamically
     resolved_templates_path = templates_dir / "debian"
     compiler = DebianTemplateCompiler(templates_dir=resolved_templates_path, logger=logger)
 
@@ -103,18 +110,47 @@ def build_packages_command(
 
                 manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
 
-                # Try compiling the folder tree but catch downgrade faults gracefully
-                try:
-                    builder.create_package_tree(
-                        config=manifest.config,
-                        project_config=proj_manifest.config
-                    )
-                    processed_count += 1
-                except ValueError as validation_error:
-                    if "Version downgrade rejected" in str(validation_error):
-                        logger.alert(f"Skipping {item.name}: {validation_error}")
-                        continue
-                    raise
+                # FIX 2: Execute an active loop block to handle interactive auto-bumps
+                compiled_successfully = False
+                while not compiled_successfully:
+                    try:
+                        builder.create_package_tree(
+                            config=manifest.config,
+                            project_config=proj_manifest.config
+                        )
+                        processed_count += 1
+                        compiled_successfully = True
+                    except ValueError as validation_error:
+                        # Catch the unique string exception raised by our changelog engine
+                        if "Manifest modified without version bump" in str(validation_error):
+
+                            # Calculate the next logical micro version string value automatically
+                            from packaging.version import Version
+                            current_ver = Version(manifest.config.version)
+                            next_version_str = f"{current_ver.major}.{current_ver.minor}.{current_ver.micro + 1}"
+
+                            # Intercept flag state or launch an interactive click confirmation prompt block
+                            prompt_msg = (
+                                f"Manifest modified without version bump for '{manifest.config.name}'. "
+                                f"Auto-bump version identifier to {next_version_str}?"
+                            )
+
+                            if bump_version or click.confirm(prompt_msg, default=False):
+                                logger.info(f"Auto-bumping manifest file {item.name} forward to v{next_version_str}...")
+
+                                # Rewrite the physical YAML manifest file directly on disk platter tracks
+                                raw_yaml_data["version"] = next_version_str
+                                with open(item, "w", encoding="utf-8") as yaml_out_stream:
+                                    yaml.safe_dump(raw_yaml_data, yaml_out_stream, default_flow_style=False)
+
+                                # Reload the manifest file instance state values into memory and cycle loop to re-try build
+                                manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
+                                continue
+                            else:
+                                # User selected "No": Log an alert message, break loop, and skip file gracefully
+                                logger.alert(f"Skipping package file {item.name} due to state version mismatch.")
+                                break
+                        raise  # Re-raise alternative genuine errors (like rogue changelog templates)
 
             except Exception as error:
                 logger.emergency(f"Execution Error processing {item.name}: {error}")
