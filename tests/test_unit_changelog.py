@@ -401,3 +401,75 @@ def test_changelog_raises_value_error_on_version_downgrade(
             config=config_v1,
             project_config=project_config_dvo
         )
+
+def test_changelog_raises_value_error_when_manifest_modified_without_version_bump(
+    manifest_v2: str,
+    project_config: str,
+    changelog_v2: str,
+) -> None:
+    """Raises ValueError when manifest data changes but the version does not.
+
+    Verifies that the engine raises a ValueError if modifications are made
+    to a manifest without changing the version string identifier.
+
+    Args:
+        manifest_v2: A test fixture providing a baseline v2 (1.0.1) config state.
+        project_config: A test fixture providing global project configuration fields.
+        changelog_v2: Pre-existing history that is already at version 1.0.1.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v2, logger=silent_logger)
+
+    # SETUP: Load manifest_v2 (1.0.1) but alter a field to simulate a modification
+    # without changing the version string away from 1.0.1
+    raw_manifest_data = yaml.safe_load(manifest_v2)
+    raw_manifest_data["description"] = "A brand new modified description text rule."
+
+    config_modified = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
+    project_config_dvo = ProjectManifest(
+        raw_data=yaml.safe_load(project_config), logger=silent_logger
+    ).config
+
+    # ASSERTION: The loop must throw an exception to protect against duplicate headers
+    with pytest.raises(ValueError, match="Manifest modified without version bump"):
+        changelog_engine.generate_next_version(
+            config=config_modified,
+            project_config=project_config_dvo
+        )
+
+
+def test_changelog_calculates_modified_os_mapping_property_deltas(
+    manifest_v1: str,
+    project_config: str,
+    changelog_v1: str,
+) -> None:
+    """Verifies that the engine detects and documents altered fields inside os_mappings.
+
+    Args:
+        manifest_v1: A test fixture providing a baseline configuration state.
+        project_config: A test fixture providing global project configuration fields.
+        changelog_v1: An existing history that has progressed forward to v1.0.0.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+
+    # SETUP: Alter 'set_codename' for index 0 and bump version to pass downgrade checks
+    raw_manifest_data = yaml.safe_load(manifest_v1)
+    raw_manifest_data["os_mappings"][0]["set_codename"] = "noble"
+    raw_manifest_data["version"] = "1.0.1"
+
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
+    project_config_dvo = ProjectManifest(
+        raw_data=yaml.safe_load(project_config), logger=silent_logger
+    ).config
+
+    # EXECUTION: Run the dynamic diff generation loop pass
+    compiled_output = changelog_engine.generate_next_version(
+        config=config_v2,
+        project_config=project_config_dvo,
+        current_time="Mon, 10 Aug 2026 13:00:00 +0000"
+    )
+
+    # ASSERTION: Engine must compute the internal rule change bullet lines successfully
+    assert "Modified os_mappings rule matching pop|linuxmint" in compiled_output
+    assert "set_codename=noble" in compiled_output

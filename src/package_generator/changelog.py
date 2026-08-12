@@ -189,7 +189,6 @@ class Changelog:
 
         # Case A: Genesis Slate (No historical logs exist)
         if not self.latest_entry:
-            # Track initialization of a blank baseline slate
             self._logger.info(
                 f"Generating genesis release changelog block for: {config.name} ({config.version})"
             )
@@ -208,11 +207,10 @@ class Changelog:
             return bullet_lines
 
         # Case B: Incremental Delta Calculation (Building on top of history logs)
-        # Confirm the initialization of a version increment sweep pass
         self._logger.info(
-                f"Calculating delta differences for version upgrade: "
-                f"{self.latest_entry.version} -> {config.version}"
-            )
+            f"Calculating delta differences for version upgrade: "
+            f"{self.latest_entry.version} -> {config.version}"
+        )
         bullet_lines.append(f"  * Updated version to {config.version}")
         history_map, historical_matches = self._reconstruct_historical_state()
 
@@ -234,7 +232,37 @@ class Changelog:
             strategy_name = "dynamic" if config.dynamic_keyring else "static"
             bullet_lines.append(f"  * Toggled repository keyring strategy to: {strategy_name}")
 
+        # Track internal updates to properties within active OS mappings
         current_matches = {m.match for m in config.os_mappings}
+        for index, mapping in enumerate(config.os_mappings):
+            if mapping.match in historical_matches:
+                # Compare incoming internal properties against the reconstructed history snapshot
+                hist_dist = history_map.get(f"os_mappings.{index}.set_dist")
+                hist_codename = history_map.get(f"os_mappings.{index}.set_codename")
+
+                if (hist_dist and hist_dist != mapping.set_dist) or \
+                   (hist_codename and hist_codename != mapping.set_codename):
+
+                    # FIX 2: Wrapped the long string in parenthesis to use implicit concatenation
+                    self._logger.debug(
+                        f"Change detected: Properties modified inside "
+                        f"mapping match '{mapping.match}'."
+                    )
+
+                    # FIX 3: Parenthesized string continuation keeps this line short and sweet
+                    bullet_lines.append(
+                        f"  * Modified os_mappings rule matching {mapping.match}"
+                    )
+
+                    if hist_dist != mapping.set_dist:
+                        bullet_lines.append(
+                            f"  * os_mappings.{index}.set_dist={mapping.set_dist}"
+                        )
+                    if hist_codename != mapping.set_codename:
+                        bullet_lines.append(
+                            f"  * os_mappings.{index}.set_codename={mapping.set_codename}"
+                        )
+
         for old_match in sorted(historical_matches):
             if old_match not in current_matches:
                 # Record when a single operating system mapping rule flavor vanishes
@@ -270,23 +298,35 @@ class Changelog:
             f"under maintainer signature: {project_config.maintainer_name}"
         )
 
-        # GUARD: Reject version downgrades using native packaging tools
         if self.latest_entry:
-            if Version(config.version) < Version(self.latest_entry.version):
+            current_ver_obj = Version(config.version)
+            previous_ver_obj = Version(self.latest_entry.version)
+
+            if current_ver_obj < previous_ver_obj:
                 raise ValueError(
                     f"Version downgrade rejected for {config.name}. "
-                    f"Attempted v{config.version} but history is at v{self.latest_entry.version}."
+                    f"Attempted to compile v{config.version} "
+                    f"but history has already progressed forward to v{self.latest_entry.version}."
                 )
-
 
         timestamp = current_time if current_time is not None else formatdate(localtime=True)
         bullet_lines = self._calculate_diff_bullets(config)
 
-        # GUARD: Skip writing duplicate entries if no field changes were calculated
+        # Raise a ValueError if the manifest was modified but version string remained identical
         if self.latest_entry and config.version == self.latest_entry.version:
-            if len(bullet_lines) == 1:  # Only contains default version update row
-                self._logger.info(f"No changes detected for package '{config.name}'.")
-                return self._raw_text
+            # Contains actual detected field differences beyond the version tag row
+            if len(bullet_lines) > 1:
+                raise ValueError(
+                    f"Manifest modified without version bump for package '{config.name}'. "
+                    f"Changes detected at version {config.version} must be accompanied "
+                    f"by an incremented version."
+                )
+            # Safe duplicate no-op fallback run path
+            self._logger.info(
+                f"No changes detected for package '{config.name}' at version {config.version}. "
+                f"Preserving changelog."
+            )
+            return self._raw_text
 
         changes_block = "\n".join(bullet_lines)
         new_block = (
