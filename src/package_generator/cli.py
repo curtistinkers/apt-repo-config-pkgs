@@ -13,8 +13,8 @@ import yaml
 from .builder import DebianPackageBuilder
 from .compiler import DebianTemplateCompiler
 from .logger import Logger
-from .manifest import RepositoryManifest
 from .project_manifest import ProjectManifest
+from .repository_manifest import RepositoryManifest
 
 
 @click.group()
@@ -72,7 +72,7 @@ def build_packages_command(
     logger.debug(f"Targeting outputs to directory: {sources_dir}")
 
     try:
-        with open(project_config, "r", encoding="utf-8") as project_stream:
+        with open(project_config, encoding="utf-8") as project_stream:
             raw_project_data = yaml.safe_load(project_stream)
 
         proj_manifest = ProjectManifest(raw_data=raw_project_data, logger=logger)
@@ -98,7 +98,7 @@ def build_packages_command(
             logger.debug(f"Loading file stream: {item.name}")
 
             try:
-                with open(item, "r", encoding="utf-8") as file_stream:
+                with open(item, encoding="utf-8") as file_stream:
                     raw_yaml_data = yaml.safe_load(file_stream)
 
                 manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)

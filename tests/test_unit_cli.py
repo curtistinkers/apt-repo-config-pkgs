@@ -9,46 +9,77 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from package_generator.cli import main_cli
 
-def test_unit_cli_build_subcommand_routes_correctly() -> None:
+
+def test_unit_cli_build_subcommand_routes_correctly(
+    tmp_path: Path,
+    project_config: str
+) -> None:
     """Validate build subcommand.
 
     Verifies that the CLI 'build' subcommand exists under our main interface
     group and executes with a successful exit status code 0.
-    """
-    # 1. SETUP: Import the primary CLI group component block
-    from package_generator.cli import main_cli
 
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        project_config: A test fixture providing a valid raw project YAML string.
+    """
     # Initialize an isolated Click command test runner
     runner = CliRunner()
 
-    # 2. EXECUTION: Run the clean command
-    result = runner.invoke(main_cli, ["build"])
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
 
-    # 3. SPECIFICATION ASSERTION: The command must route successfully
+    # Write out a project file
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    # Pass the temporary project file path explicitly to clear the Click gate
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(project_file),
+        "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(templates_dir),
+        "--sources-dir", str(sources_dir)
+    ])
+
+    # ASSERTION: The command must route successfully
     assert result.exit_code == 0
 
-def test_unit_cli_clean_subcommand_routes_correctly() -> None:
+def test_unit_cli_clean_subcommand_routes_correctly(tmp_path: Path) -> None:
     """Validate clean subcommand.
 
     Verifies that the CLI 'clean' subcommand exists under our main interface
     group and executes with a successful exit status code 0.
-    """
-    # 1. SETUP: Import the primary CLI group component block
-    from package_generator.cli import main_cli
 
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+    """
     # Initialize an isolated Click command test runner
     runner = CliRunner()
 
-    # 2. EXECUTION: Run the clean command
-    result = runner.invoke(main_cli, ["clean"])
+    # Create a safe sandbox directory for the clean command to target
+    sandbox_dir = tmp_path / "dpkg-sources"
+    sandbox_dir.mkdir()
 
-    # 3. SPECIFICATION ASSERTION: The command must route successfully
+    # Run the clean command targeting our isolated sandbox path container
+    result = runner.invoke(main_cli, [
+        "clean",
+        "--sources-dir", str(sandbox_dir)
+    ])
+
+    # ASSERTION: The command must route successfully
     assert result.exit_code == 0
 
 def test_unit_cli_build_subcommand_gracefully_handles_corrupted_syntax_files(
     tmp_path: Path,
-    manifest_corrupted_garbage_syntax: str
+    manifest_corrupted_garbage_syntax: str,
+    project_config: str
 ) -> None:
     """Verifies CLI behavior when processing unparseable manifest files.
 
@@ -58,36 +89,42 @@ def test_unit_cli_build_subcommand_gracefully_handles_corrupted_syntax_files(
     Args:
         tmp_path: A built-in pytest fixture providing a temporary directory path.
         manifest_corrupted_garbage_syntax: Test fixture containing invalid YAML syntax text.
+        project_config: A test fixture providing a valid raw project YAML string.
     """
-    # Create input paths and write un-parseable file text directly to disk
-    manifests_dir = tmp_path / "manifests"
-    sources_dir = tmp_path / "sources"
-    manifests_dir.mkdir(parents=True)
-
-    bad_file = manifests_dir / "corrupted.yaml"
-    bad_file.write_text(manifest_corrupted_garbage_syntax, encoding="utf-8")
-
-    from package_generator.cli import main_cli
+    # Initialize an isolated Click command test runner
     runner = CliRunner()
 
-    # Locate our real repository template directories root safely
-    real_templates_root = Path(__file__).parents[1] / "templates"
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
 
-    # Fire the build subcommand across our corrupted sandbox path
+    # Write out a corrupted manifest file
+    bad_manifest_file = manifests_dir / "corrupted.yaml"
+    bad_manifest_file.write_text(manifest_corrupted_garbage_syntax, encoding="utf-8")
+
+    # Write out a project file
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    # Run the build command
     result = runner.invoke(main_cli, [
         "build",
+        "--project-config", str(project_file),
         "--manifests-dir", str(manifests_dir),
-        "--templates-dir", str(real_templates_root), # NEW: Pass the option explicitly
+        "--templates-dir", str(templates_dir),
         "--sources-dir", str(sources_dir)
     ])
 
-    # ASSERTIONS: It must report an emergency and exit code 1
+    # ASSERTIONS: It must flag a fatal failure and exit with 1
     assert result.exit_code == 1
     assert "EMERGENCY: Execution Error processing corrupted.yaml" in result.output
 
 def test_unit_cli_build_subcommand_gracefully_handles_corrupted_project_config(
     tmp_path: Path,
-    manifest_corrupted_garbage_syntax: str,
+    project_config_multiple_missing: str,
     manifest_v1: str
 ) -> None:
     """Verifies CLI behavior when processing an unparseable global project config.
@@ -97,35 +134,36 @@ def test_unit_cli_build_subcommand_gracefully_handles_corrupted_project_config(
 
     Args:
         tmp_path: A built-in pytest fixture providing a temporary directory path.
-        manifest_corrupted_garbage_syntax: Test fixture containing invalid syntax text.
+        project_config_multiple_missing: Test fixture containing invalid syntax text.
         manifest_v1: A test fixture providing a valid raw manifest YAML string.
     """
-    # 1. SETUP: Create paths and write our corrupted text directly to the project file
-    manifests_dir = tmp_path / "manifests"
-    sources_dir = tmp_path / "sources"
-    manifests_dir.mkdir(parents=True)
-
-    bad_project_file = tmp_path / "project.yaml"
-    bad_project_file.write_text(manifest_corrupted_garbage_syntax, encoding="utf-8")
-
-    # Supply a valid package manifest to isolate the error strictly to the project config
-    good_manifest_file = manifests_dir / "test-repo.yaml"
-    good_manifest_file.write_text(manifest_v1, encoding="utf-8")
-
-    real_templates_root = Path(__file__).parents[1] / "templates"
-
-    from package_generator.cli import main_cli
+    # Initialize an isolated Click command test runner
     runner = CliRunner()
 
-    # 2. EXECUTION: Run the build command targeting our unparseable global project file
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Write out a manifest file
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    # Write out a bad project file
+    bad_project_file = tmp_path / "project.yaml"
+    bad_project_file.write_text(project_config_multiple_missing, encoding="utf-8")
+
+    # Run the build command
     result = runner.invoke(main_cli, [
         "build",
         "--project-config", str(bad_project_file),
         "--manifests-dir", str(manifests_dir),
-        "--templates-dir", str(real_templates_root),
+        "--templates-dir", str(templates_dir),
         "--sources-dir", str(sources_dir)
     ])
 
-    # 3. SPECIFICATION ASSERTIONS: It must flag a fatal failure and exit with 1
+    # ASSERTIONS: It must flag a fatal failure and exit with 1
     assert result.exit_code == 1
     assert "EMERGENCY: Fatal validation failure inside global project config" in result.output

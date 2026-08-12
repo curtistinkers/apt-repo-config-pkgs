@@ -1,4 +1,4 @@
-# tests/test_unit_manifest.py
+# tests/test_unit_repository_manifest.py
 """RepositoryManifest unit tests."""
 
 import pytest
