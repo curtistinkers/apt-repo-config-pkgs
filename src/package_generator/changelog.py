@@ -7,6 +7,8 @@ reconstruction, and dynamic delta diff calculations.
 import re
 from email.utils import formatdate
 
+from packaging.version import Version
+
 from .logger import Logger
 from .models import (
     ChangelogEntry,
@@ -268,8 +270,23 @@ class Changelog:
             f"under maintainer signature: {project_config.maintainer_name}"
         )
 
+        # GUARD: Reject version downgrades using native packaging tools
+        if self.latest_entry:
+            if Version(config.version) < Version(self.latest_entry.version):
+                raise ValueError(
+                    f"Version downgrade rejected for {config.name}. "
+                    f"Attempted v{config.version} but history is at v{self.latest_entry.version}."
+                )
+
+
         timestamp = current_time if current_time is not None else formatdate(localtime=True)
         bullet_lines = self._calculate_diff_bullets(config)
+
+        # GUARD: Skip writing duplicate entries if no field changes were calculated
+        if self.latest_entry and config.version == self.latest_entry.version:
+            if len(bullet_lines) == 1:  # Only contains default version update row
+                self._logger.info(f"No changes detected for package '{config.name}'.")
+                return self._raw_text
 
         changes_block = "\n".join(bullet_lines)
         new_block = (

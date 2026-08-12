@@ -103,11 +103,18 @@ def build_packages_command(
 
                 manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
 
-                builder.create_package_tree(
-                    config=manifest.config,
-                    project_config=proj_manifest.config
-                )
-                processed_count += 1
+                # Try compiling the folder tree but catch downgrade faults gracefully
+                try:
+                    builder.create_package_tree(
+                        config=manifest.config,
+                        project_config=proj_manifest.config
+                    )
+                    processed_count += 1
+                except ValueError as validation_error:
+                    if "Version downgrade rejected" in str(validation_error):
+                        logger.alert(f"Skipping {item.name}: {validation_error}")
+                        continue
+                    raise
 
             except Exception as error:
                 logger.emergency(f"Execution Error processing {item.name}: {error}")

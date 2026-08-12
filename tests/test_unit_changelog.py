@@ -7,6 +7,7 @@ state-driven diff calculations, and version history stacking.
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from package_generator import Changelog, Logger, ProjectManifest, RepositoryManifest
@@ -332,3 +333,71 @@ def test_changelog_can_reconstruct_exact_manifest_v3_file(
     )
 
     assert rendered_manifest.strip() == manifest_v3.strip()
+
+def test_changelog_returns_raw_text_unchanged_if_no_changes_detected(
+    manifest_v1: str,
+    project_config: str,
+    changelog_v1: str,
+) -> None:
+    """Verifies that the engine returns the existing text if no data fields changed.
+
+    Args:
+        manifest_v1: A test fixture providing the baseline configuration state.
+        project_config: A test fixture providing global project configuration fields.
+        changelog_v1: A pre-existing changelog file text block.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # SETUP: Ingest changelog_v1 as our active history pool
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+
+    # Process manifest_v1 again (which has an identical version 1.0.0 and same fields)
+    config_v1 = RepositoryManifest(
+        raw_data=yaml.safe_load(manifest_v1), logger=silent_logger
+    ).config
+    project_config_dvo = ProjectManifest(
+        raw_data=yaml.safe_load(project_config), logger=silent_logger
+    ).config
+
+    # EXECUTION: Attempt to compile a new version entry block
+    compiled_output = changelog_engine.generate_next_version(
+        config=config_v1,
+        project_config=project_config_dvo,
+        current_time="Mon, 10 Aug 2026 12:00:00 +0000"
+    )
+
+    # ASSERTION: The output text stream must match changelog_v1 precisely without duplicates
+    assert compiled_output.strip() == changelog_v1.strip()
+
+
+def test_changelog_raises_value_error_on_version_downgrade(
+    manifest_v1: str,
+    project_config: str,
+    changelog_v2: str,
+) -> None:
+    """Verifies that attempting a backward version downgrade raises a ValueError.
+
+    Args:
+        manifest_v1: A test fixture providing a v1 (version 1.0.0) config state.
+        project_config: A test fixture providing global project configuration fields.
+        changelog_v2: Pre-existing history that is already ahead at version 1.0.1.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # SETUP: Ingest changelog_v2 history (which has already progressed to version 1.0.1)
+    changelog_engine = Changelog(raw_text=changelog_v2, logger=silent_logger)
+
+    # Feed manifest_v1 (version 1.0.0) which attempts an illegal downgrade track
+    config_v1 = RepositoryManifest(
+        raw_data=yaml.safe_load(manifest_v1), logger=silent_logger
+    ).config
+    project_config_dvo = ProjectManifest(
+        raw_data=yaml.safe_load(project_config), logger=silent_logger
+    ).config
+
+    # ASSERTION: The generation loop must raise a ValueError and halt that path immediately
+    with pytest.raises(ValueError, match="Version downgrade rejected"):
+        changelog_engine.generate_next_version(
+            config=config_v1,
+            project_config=project_config_dvo
+        )
