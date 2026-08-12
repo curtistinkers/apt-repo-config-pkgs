@@ -1,6 +1,6 @@
 name: curtistinkers
 description: Configures my private repository
-version: 1.0.0
+version: 1.0.1
 copyright_year: 2026
 dynamic_keyring: false
 
@@ -11,9 +11,9 @@ repo:
   key_url: https://apt.curtistinkers.com/curtistinkers-archive-keyring.gpg
 
 os_mappings:
-  - match: pop|linuxmint|elementary
-    set_dist: ubuntu
-    set_codename: ${UBUNTU_CODENAME}
-  - match: raspbian
-    set_dist: debian
-    set_codename: ${VERSION_CODENAME}
+  pop|linuxmint|elementary:
+    distro: ubuntu
+    codename: ${UBUNTU_CODENAME}
+  raspbian:
+    distro: debian
+    codename: ${DEBIAN_CODENAME}
