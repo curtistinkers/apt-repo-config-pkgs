@@ -119,13 +119,22 @@ def build_packages_command(
         sys.exit(1)
 
     # Use the user-supplied templates directory path dynamically
-    resolved_templates_path = templates_dir / "debian"
-    compiler = DebianTemplateCompiler(templates_dir=resolved_templates_path, logger=logger)
+    templates_path = templates_dir / "debian"
+    compiler = DebianTemplateCompiler(templates_dir=templates_path, logger=logger)
 
+    from .downloader import Downloader
+    from .gpg import GpgEngine
+
+    downloader_service = Downloader(logger=logger)
+    gpg_service = GpgEngine(logger=logger)
+
+    # Inject the services down to the package directory builder coordinator
     builder = DebianPackageBuilder(
         sources_dir=sources_dir,
         logger=logger,
-        compiler=compiler
+        compiler=compiler,
+        downloader=downloader_service,
+        gpg_engine=gpg_service,
     )
 
     processed_count = 0
