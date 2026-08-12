@@ -13,4 +13,4 @@ curtistinkers (1.0.0) stable; urgency=medium
   * os_mappings.raspbian.distro=debian
   * os_mappings.raspbian.codename=${DEBIAN_CODENAME}
 
- -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 07:23:40 -0500
+ -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 16:38:47 -0500
