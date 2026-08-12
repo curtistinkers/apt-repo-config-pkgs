@@ -22,10 +22,10 @@ def project_config() -> str:
     Returns:
         A multiline YAML string representing a project config file.
     """
-    return """maintainer_name: "Alice"
-maintainer_email: "alice@example.com"
-copyright_holder: "Alice"
-repository_url: "https://git.example.com/alice/deb-repo-config-packages"
+    return """maintainer_name: Alice
+maintainer_email: alice@example.com
+copyright_holder: Alice
+repository_url: https://git.example.com/alice/deb-repo-config-packages
 """
 
 @pytest.fixture
@@ -272,4 +272,44 @@ def manifest_corrupted_garbage_syntax() -> str:
     return """name: unparseable-package
 version: 1.0.0
 this is invalid un-indented garbage text layout lines that will break the parser structure { [ !!
+"""
+
+@pytest.fixture
+def mock_project_config_template() -> str:
+    """Provides a valid raw global project configuration YAML text string.
+
+    Returns:
+        A multiline YAML string representing a project config file.
+    """
+    return """maintainer_name: {{ maintainer_name }}
+maintainer_email: {{ maintainer_email}}
+copyright_holder: {{ copyright_holder }}
+repository_url: {{ repository_url }}
+
+"""
+
+@pytest.fixture
+def mock_manifest_template() -> str:
+    """Provides a token-matching template layout mirroring manifest_v1 exactly.
+
+    Returns:
+        A multiline YAML string representing a repository configuration file.
+    """
+    return """name: {{ package_name }}
+version: {{ version }}
+description: {{ short_description }}
+copyright_year: {{ copyright_year }}
+dynamic_keyring: {% if dynamic_keyring %}true{% else %}false{% endif %}
+repo:
+  url: {{ repo_url }}
+  suites: {{ repo_suites }}
+  components: {{ repo_components }}
+  key_url: {{ repo_key_url }}
+os_mappings:
+{%- for mapping in os_mappings %}
+  - match: {{ mapping.match }}
+    set_dist: {{ mapping.set_dist }}
+    set_codename: {{ mapping.set_codename }}
+{%- endfor %}
+
 """
