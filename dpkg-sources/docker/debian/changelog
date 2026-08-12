@@ -1,0 +1,14 @@
+docker (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=Configures the official Docker CE repository.
+  * copyright_year=2026
+  * dynamic_keyring=true
+  * repo.url=https://docker.com/linux/${TARGET_DIST}
+  * repo.suites=${TARGET_CODENAME}
+  * repo.components=stable
+  * repo.key_url=https://download.docker.com/linux/${TARGET_DIST}/gpg
+  * os_mappings.pop|linuxmint|elementary.distro=ubuntu
+  * os_mappings.pop|linuxmint|elementary.codename=${UBUNTU_CODENAME}
+
+ -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 07:24:38 -0500

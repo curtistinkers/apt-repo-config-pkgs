@@ -1,0 +1,13 @@
+Source: docker-repo-config
+Section: utils
+Priority: optional
+Maintainer: curtistinkers <curtistinkers@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+
+Package: docker-repo-config
+Architecture: all
+Depends: ${misc:Depends}, wget, gnupg
+Description: Configures the official Docker CE repository.
+ This package automatically manages the APT repository configuration and
+ secure cryptographic keyrings for docker.
