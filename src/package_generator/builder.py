@@ -141,7 +141,7 @@ class DebianPackageBuilder:
             binary_key_bytes = raw_bytes
 
         # 3. Commit the verified binary keyring to disk
-        keyrings_dir = target_debian_dir / "usr" / "share" / "keyrings"
+        keyrings_dir = target_debian_dir.parent / "usr" / "share" / "keyrings"
         keyrings_dir.mkdir(parents=True, exist_ok=True)
 
         output_key_file = keyrings_dir / f"{config.name}-archive-keyring.gpg"

@@ -99,7 +99,7 @@ def test_builder_build_clean_package_directory_tree(
 
     # Assert that the modern static binary archive-keyring was saved perfectly
     expected_keyring = (
-        target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
+        target_debian_dir.parent / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
     )
     assert expected_keyring.exists()
     assert expected_keyring.read_bytes() == b"MOCK_BINARY_BYTES"
@@ -264,7 +264,7 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
 
     # 4. DECOUPLED INVARIANT ASSERTIONS: Verify coordination behavior
     expected_key_file = (
-        target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
+        target_debian_dir.parent / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
     )
 
     # FIX 2: Sync the exact endpoint file path URL string matching manifest_v1
@@ -316,7 +316,7 @@ def test_builder_invokes_dearmor_when_key_payload_starts_with_ascii_headers(
     )
 
     expected_file = (
-        target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
+        target_debian_dir.parent / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
     )
     assert expected_file.read_bytes() == b"MOCK_FILTERED_BINARY_BYTES"
 
@@ -355,6 +355,6 @@ def test_builder_bypasses_dearmor_when_key_payload_is_already_raw_binary(
     assert not mock_gpg.dearmor.called
 
     expected_file = (
-        target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
+        target_debian_dir.parent / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
     )
     assert expected_file.read_bytes() == mock_raw_binary_payload
