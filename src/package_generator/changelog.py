@@ -37,8 +37,18 @@ class Changelog:
         self._parse_ledger(raw_text)
         self.latest_entry = self.entries[0] if self.entries else None
 
+
     def _parse_ledger(self, raw_text: str) -> None:
-        """Scans raw text to split and extract individual release blocks."""
+        """Scans raw text to split and extract individual release blocks.
+
+        Uses traditional Debian regex metadata formatting rules to find release
+        headers, bullet lists of differences, and maintainer signatures,
+        building an in-memory sequential array list tracker of versions.
+
+        Args:
+            raw_text: Raw multiline text content stream read from an existing
+                debian/changelog tracking file platter on the disk.
+        """
         self._logger.debug("Initializing regex scanning loop across changelog file tracks...")
 
         header_pattern = re.compile(
@@ -54,6 +64,8 @@ class Changelog:
         if not headers:
             self._logger.debug("No valid historical changelog records discovered.")
             return
+
+        self._logger.debug(f"Discovered {len(headers)} historical release blocks to catalog.")
 
         for i, header_match in enumerate(headers):
             start_pos = header_match.start()
@@ -77,17 +89,34 @@ class Changelog:
             )
             self.entries.append(entry)
 
+            self._logger.debug(
+                f"Cataloged historical block: {entry.package_name} ({entry.version})"
+            )
+
+
     def _reconstruct_historical_state(self) -> tuple[dict[str, str], set[str]]:
         """Compiles historical entry strings chronologically into a clean state map.
 
+        Iterates backwards through the collection list of parsed changelog entries,
+        from the oldest record to the most recent, accumulating explicit assignments
+        and text delta modifications into a unified final state snapshot dictionary.
+
         Returns:
-            A tuple containing a dictionary of scalar properties and a set of
-            historical OS mapping match strings.
+            A tuple containing a dictionary of scalar properties mapping configuration keys
+            to their values, and a set of active historical OS mapping match strings.
         """
+        # Signal the initialization of the historical accumulator loop
+        self._logger.debug(
+            "Reconstructing absolute state timeline by compiling history backwards..."
+        )
+
         history_map: dict[str, str] = {}
         historical_matches: set[str] = set()
 
         for entry in reversed(self.entries):
+            # Record exactly which historical block version is being collated
+            self._logger.debug(f"Collating change bullets from version block: {entry.version}")
+
             # Parse traditional key=value declarations
             for row in entry.changes.splitlines():
                 clean_row = row.strip().lstrip("*").strip()
@@ -101,8 +130,16 @@ class Changelog:
 
             # Accumulate historical macro state updates from human-readable logs
             if "Toggled repository keyring strategy to: dynamic" in entry.changes:
+                # Track a dynamic keyring toggle found in the raw text logs
+                self._logger.debug(
+                    f"Tracking state transition: dynamic_keyring=true found at v{entry.version}"
+                )
                 history_map["dynamic_keyring"] = "true"
             elif "Toggled repository keyring strategy to: static" in entry.changes:
+                # Track a static keyring toggle found in the raw text logs
+                self._logger.debug(
+                    f"Tracking state transition: dynamic_keyring=false found at v{entry.version}"
+                )
                 history_map["dynamic_keyring"] = "false"
 
             if "Modified description:" in entry.changes:
@@ -121,16 +158,39 @@ class Changelog:
                 r"Removed os_mappings rule matching ([^\.\s\n]+)", entry.changes
             )
             if pruned_match:
-                historical_matches.discard(pruned_match.group(1).strip())
+                matched_flavor = pruned_match.group(1).strip()
+                # Record when an array rule exclusion is successfully tracked
+                self._logger.debug(
+                    f"Tracking state removal: os_mapping '{matched_flavor}' "
+                    f"discarded at v{entry.version}"
+                )
+                historical_matches.discard(matched_flavor)
 
         return history_map, historical_matches
 
+
     def _calculate_diff_bullets(self, config: PackageConfig) -> list[str]:
-        """Compares incoming config against historical state to generate bullet lines."""
+        """Compares incoming config against historical state to generate bullet lines.
+
+        Inspects the current configuration parameters against the compiled
+        historical baseline state map, determining if changes exist to append
+        descriptive release bullets dynamically.
+
+        Args:
+            config: Incoming type-safe PackageConfig domain value object state
+                to evaluate against historical release milestones.
+
+        Returns:
+            A list of formatted text bullet strings representing structural modifications.
+        """
         bullet_lines: list[str] = []
 
-        # Case A: Genesis Slate
+        # Case A: Genesis Slate (No historical logs exist)
         if not self.latest_entry:
+            # Track initialization of a blank baseline slate
+            self._logger.info(
+                f"Generating genesis release changelog block for: {config.name} ({config.version})"
+            )
             bullet_lines.append("  * Initial package definition established.")
             bullet_lines.append(f"  * description={config.description}")
             bullet_lines.append(f"  * copyright_year={config.copyright_year}")
@@ -145,28 +205,42 @@ class Changelog:
                 bullet_lines.append(f"  * os_mappings.{index}.set_codename={mapping.set_codename}")
             return bullet_lines
 
-        # Case B: Incremental Delta Calculation
+        # Case B: Incremental Delta Calculation (Building on top of history logs)
+        # Confirm the initialization of a version increment sweep pass
+        self._logger.info(
+                f"Calculating delta differences for version upgrade: "
+                f"{self.latest_entry.version} -> {config.version}"
+            )
         bullet_lines.append(f"  * Updated version to {config.version}")
         history_map, historical_matches = self._reconstruct_historical_state()
 
         if "description" in history_map and history_map["description"] != config.description:
+            # Record a parameter shift for description text strings
+            self._logger.debug("Change detected: Package 'description' field updated.")
             bullet_lines.append(f"  * Modified description: {config.description}")
 
         if "repo.url" in history_map and history_map["repo.url"] != config.repo.url:
+            # Record a parameter shift for repository target URLs
+            self._logger.debug("Change detected: Package 'repo.url' field updated.")
             bullet_lines.append(f"  * Modified repo.url: {config.repo.url}")
             bullet_lines.append(f"  * Modified repo.key_url: {config.repo.key_url}")
 
         prev_dynamic = history_map.get("dynamic_keyring") == "true"
         if config.dynamic_keyring != prev_dynamic:
+            # Record a keyring operational strategy toggle branch shift
+            self._logger.debug("Change detected: Keyring operational strategy toggled.")
             strategy_name = "dynamic" if config.dynamic_keyring else "static"
             bullet_lines.append(f"  * Toggled repository keyring strategy to: {strategy_name}")
 
         current_matches = {m.match for m in config.os_mappings}
         for old_match in sorted(historical_matches):
             if old_match not in current_matches:
+                # Record when a single operating system mapping rule flavor vanishes
+                self._logger.debug(f"Change detected: OS mapping rule flavor '{old_match}' pruned.")
                 bullet_lines.append(f"  * Removed os_mappings rule matching {old_match}.")
 
         return bullet_lines
+
 
     def generate_next_version(
         self,
@@ -175,6 +249,10 @@ class Changelog:
         current_time: str | None = None,
     ) -> str:
         """Calculates version differences and compiles an updated changelog text stream.
+
+        Orchestrates the entire changelog assembly pipeline by converting a
+        strongly typed configuration profile and a global project profile into
+        a standard, multi-block Debian changelog text stream container.
 
         Args:
             config: Incoming package layout configuration properties to validate.
@@ -201,9 +279,16 @@ class Changelog:
         )
 
         if self._raw_text:
+            # Record a successful text stacking merge pass
+            self._logger.debug(
+                "Successfully appended new release block on top of historical text ledger lines."
+            )
             return f"{new_block}\n\n{self._raw_text.strip()}\n"
 
+        # Record a successful single-entry compilation pass
+        self._logger.debug("Successfully generated isolated baseline release text entry block.")
         return f"{new_block}\n"
+
 
     def to_package_config(self) -> PackageConfig:
         """Recreate the package manifest by working backwards.
@@ -215,10 +300,15 @@ class Changelog:
             A fully constructed PackageConfig reflecting the snapshot properties
             of this changelog configuration timeline.
         """
-        # 1. Harvest our complete historical state tracking maps compiled chronologically
+        # Record inception of the reversal mapping pipeline
+        self._logger.info(
+            "Reverse-engineering changelog text blocks back to a PackageConfig model..."
+        )
+
+        # Harvest our complete historical state tracking maps compiled chronologically
         history_map, historical_matches = self._reconstruct_historical_state()
 
-        # 2. Extract standard package parameters
+        # Extract standard package parameters
         package_name = self.entries[-1].package_name if self.entries else ""
         version = self.entries[0].version if self.entries else "1.0.0"
         description = history_map.get("description", "")
@@ -232,7 +322,7 @@ class Changelog:
             key_url=history_map.get("repo.key_url", ""),
         )
 
-        # 4. Dynamically rebuild the array list structures from our compiled mappings
+        # Dynamically rebuild the array list structures from our compiled mappings
         os_mappings: list[PackageOSMappingConfig] = []
 
         # Scan history_map keys to find every registered structural sub-index mapping item
@@ -256,6 +346,9 @@ class Changelog:
                     set_codename=history_map.get(f"os_mappings.{index}.set_codename", ""),
                 )
                 os_mappings.append(mapping_item)
+
+        # Confirm the successful finalization of the frozen data layout
+        self._logger.info(f"Successfully reverse-engineered model snapshot for version: {version}")
 
         # Compile all sub-components natively straight into your type-safe model container
         return PackageConfig(
