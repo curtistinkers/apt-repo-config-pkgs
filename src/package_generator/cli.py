@@ -68,7 +68,36 @@ def build_packages_command(
     debug: bool,
     bump_version: bool,
 ) -> None:
-    """Scans your manifests directory and orchestrates Debian package folders."""
+    """Scans your manifests directory and orchestrates Debian package folders.
+
+    Iterates chronologically through all YAML configuration files inside the
+    manifests target workspace. For each manifest discovered, it resolves the
+    underlying state timeline via the changelog engine, monitors for illegal
+    version downgrades, and intercepts un-bumped configuration modifications. If
+    a modified layout lacks a version bump, it either triggers an interactive
+    user-confirmation prompt to auto-increment the file or uses the automatic
+    version parameter flag to accept the update seamlessly.
+
+    Args:
+        project_config: Resolved physical filesystem Path targeting the global
+            project.yaml maintainer parameter workspace.
+        manifests_dir: Resolved physical filesystem Path targeting the folder
+            container where repository manifest YAML files are stored.
+        templates_dir: Resolved physical filesystem Path targeting the root
+            directory where core raw debian template blocks reside.
+        sources_dir: Resolved physical filesystem Path targeting the output
+            workspace folder where source code trees are built.
+        debug: Boolean option flag used to increase logging detail verbosity
+            and toggle downstream execution diagnostic traces.
+        bump_version: Boolean option flag used to auto-accept version changes
+            and automatically increment modified manifest file versions.
+
+    Raises:
+        ValueError: If a fatal architecture violation occurs, such as a static
+            changelog template file colliding with the state-diff engine.
+        SystemExit: Terminates execution flow with code 1 if a lower-level
+            unhandled parsing exception or filesystem lock-down occurs.
+    """
     log_level = "debug" if debug else "info"
     logger = Logger(min_terminal_level=log_level)
 
@@ -127,30 +156,45 @@ def build_packages_command(
                             # Calculate the next logical micro version string value automatically
                             from packaging.version import Version
                             current_ver = Version(manifest.config.version)
-                            next_version_str = f"{current_ver.major}.{current_ver.minor}.{current_ver.micro + 1}"
+                            next_version_str = (
+                                f"{current_ver.major}.{current_ver.minor}.{current_ver.micro + 1}"
+                            )
 
-                            # Intercept flag state or launch an interactive click confirmation prompt block
+                            # Intercept flag state or launch an interactive click
+                            # confirmation prompt block
                             prompt_msg = (
-                                f"Manifest modified without version bump for '{manifest.config.name}'. "
-                                f"Auto-bump version identifier to {next_version_str}?"
+                                f"Manifest modified without version bump "
+                                f"for '{manifest.config.name}'. Auto-bump version "
+                                f"identifier to {next_version_str}?"
                             )
 
                             if bump_version or click.confirm(prompt_msg, default=False):
-                                logger.info(f"Auto-bumping manifest file {item.name} forward to v{next_version_str}...")
+                                logger.info(
+                                    f"Auto-bumping manifest file {item.name} "
+                                    f"forward to v{next_version_str}..."
+                                    )
 
-                                # Rewrite the physical YAML manifest file directly on disk platter tracks
+                                # Rewrite the physical YAML manifest file directly on
+                                # disk platter tracks
                                 raw_yaml_data["version"] = next_version_str
                                 with open(item, "w", encoding="utf-8") as yaml_out_stream:
-                                    yaml.safe_dump(raw_yaml_data, yaml_out_stream, default_flow_style=False)
+                                    yaml.safe_dump(
+                                        raw_yaml_data, yaml_out_stream, default_flow_style=False
+                                    )
 
-                                # Reload the manifest file instance state values into memory and cycle loop to re-try build
+                                # Reload the manifest file instance state values into memory
+                                # and cycle loop to re-try build
                                 manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
                                 continue
                             else:
-                                # User selected "No": Log an alert message, break loop, and skip file gracefully
-                                logger.alert(f"Skipping package file {item.name} due to state version mismatch.")
+                                # User selected "No": Log an alert message, break loop,
+                                # and skip file gracefully
+                                logger.alert(
+                                    f"Skipping package file {item.name} due to "
+                                    f"state version mismatch."
+                                )
                                 break
-                        raise  # Re-raise alternative genuine errors (like rogue changelog templates)
+                        raise  # Re-raise alternative genuine errors like rogue changelog templates
 
             except Exception as error:
                 logger.emergency(f"Execution Error processing {item.name}: {error}")
