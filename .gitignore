@@ -4,3 +4,7 @@
 .venv/
 **/.coverage
 .ruff_cache/
+
+dpkg-sources/*/debian/**debhelper*
+dpkg-sources/*/debian/*-repo-config*
+dpkg-sources/*/debian/files
