@@ -57,8 +57,17 @@ class DebianTemplateCompiler:
         render_context: dict[str, Any] = {
             "package_name": package_config.name,
             "short_description": package_config.description,
+            "copyright_year": package_config.copyright_year,
+            "dynamic_keyring": package_config.dynamic_keyring,
+            "repo_url": package_config.repo.url,
+            "repo_suites": package_config.repo.suites,
+            "repo_components": package_config.repo.components,
+            "repo_key_url": package_config.repo.key_url,
+
             "maintainer_name": project_config.maintainer_name,
             "maintainer_email": project_config.maintainer_email,
+            "copyright_holder": project_config.copyright_holder,
+            "repository_url": project_config.repository_url,
         }
 
         # Pass the context map straight into the template context natively
