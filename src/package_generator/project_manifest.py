@@ -1,3 +1,4 @@
+# src/package_generator/project_manifest.py
 """Project manifest translation engine.
 
 Provides capabilities to read, thoroughly validate, and compile global

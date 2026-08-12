@@ -1,3 +1,4 @@
+# src/package_generator/changelog.py
 """Debian changelog parsing and generation engine.
 
 Decoupled into single-purpose methods for text parsing, history state

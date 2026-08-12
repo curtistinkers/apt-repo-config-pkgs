@@ -1,3 +1,4 @@
+# src/package_generator/cli.py
 """Command-line interface specification layer.
 
 Maps incoming terminal arguments, subcommands, and debug flags to core business

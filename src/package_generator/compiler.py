@@ -1,3 +1,4 @@
+# src/package_generator/compiler.py
 """Debian template compilation engine.
 
 Provides infrastructure capabilities to read raw Jinja2 text templates from disk,

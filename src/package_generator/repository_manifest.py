@@ -1,4 +1,4 @@
-# src/package_generator/manifest.py
+# src/package_generator/repository_manifest.py
 """Repository manifest translation engine.
 
 Provides capabilities to read, thoroughly validate, and compile unstructured
