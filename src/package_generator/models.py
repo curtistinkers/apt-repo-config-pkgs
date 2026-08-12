@@ -40,3 +40,13 @@ class PackageConfig:
     dynamic_keyring: bool
     repo: PackageRepoConfig  # <-- Nested structured value object type-hint
     os_mappings: list[PackageOSMappingConfig] = field(default_factory=list)
+
+@dataclass(frozen=True)
+class ChangelogEntry:
+    """Represents a single parsed historical Debian changelog release block."""
+    package_name: str
+    version: str
+    suite: str
+    urgency: str
+    changes: str
+    timestamp: str
