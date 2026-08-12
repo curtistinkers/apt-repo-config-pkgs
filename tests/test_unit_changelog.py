@@ -517,3 +517,79 @@ def test_changelog_calculates_modified_os_mapping_distro_property_deltas(
 
     assert "Modified os_mappings rule matching pop|linuxmint" in compiled_output
     assert "distro=debian-custom" in compiled_output
+
+def test_changelog_isolates_repo_url_and_key_url_deltas_precisely(
+    project_config: str,
+    manifest_v1: str,
+    changelog_v1: str,
+) -> None:
+    """Verifies modifying only repo.url does not falsely claim a key_url delta."""
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+
+    raw_manifest_data = yaml.safe_load(manifest_v1)
+    # Modify ONLY the url parameter to match your real-world scenario bug
+    raw_manifest_data["repo"]["url"] = "http://packages2.openmediavault.org"
+    raw_manifest_data["version"] = "1.0.1"
+
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
+    project_dvo = ProjectManifest(raw_data=yaml.safe_load(project_config), logger=silent_logger).config
+
+    compiled_output = changelog_engine.generate_next_version(
+        config=config_v2, project_config=project_dvo
+    )
+
+    assert "repo.url=" in compiled_output
+    # CRITICAL INVARIANT: It must NOT claim that repo.key_url was modified
+    assert "Modified repo.key_url" not in compiled_output
+
+
+def test_changelog_calculates_and_persists_repo_components_and_suites_deltas(
+    project_config: str,
+    manifest_v1: str,
+    changelog_v1: str,
+) -> None:
+    """Verifies that changes to repo components and suites calculate deltas."""
+    silent_logger = Logger(min_terminal_level="emergency")
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+
+    raw_manifest_data = yaml.safe_load(manifest_v1)
+    # Modify the parameters to match your real-world OpenMediaVault values
+    raw_manifest_data["repo"]["components"] = "stable"
+    raw_manifest_data["repo"]["suites"] = "synchrony1"
+    raw_manifest_data["version"] = "1.0.1"
+
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
+    project_dvo = ProjectManifest(raw_data=yaml.safe_load(project_config), logger=silent_logger).config
+
+    compiled_output = changelog_engine.generate_next_version(
+        config=config_v2, project_config=project_dvo
+    )
+
+    assert "repo.components=" in compiled_output
+    assert "repo.suites=" in compiled_output
+
+
+def test_changelog_reverse_parser_successfully_reconstructs_components_and_suites(
+    changelog_v1: str,
+) -> None:
+    """Verifies that to_package_config reverse-engineers components and suites."""
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # Inject explicit components and suites historical bullet metrics into a raw changelog string
+    custom_changelog = (
+        "openmediavault (1.0.0) stable; urgency=medium\n\n"
+        "  * Initial package definition established.\n"
+        "  * repo.url=http://packages.openmediavault.org/public/\n"
+        "  * repo.suites=synchrony1\n"
+        "  * repo.components=stable\n"
+        "  * repo.key_url=https://packages.openmediavault.io/archive.key\n\n"
+        " -- Alice <alice@example.com>  Wed, 12 Aug 2026 06:57:21 -0500\n"
+    )
+
+    changelog_engine = Changelog(raw_text=custom_changelog, logger=silent_logger)
+    reconstructed_config = changelog_engine.to_package_config()
+
+    # CRITICAL INVARIANT: The reverse-parsed object must capture the nested data
+    assert reconstructed_config.repo.components == "stable"
+    assert reconstructed_config.repo.suites == "synchrony1"

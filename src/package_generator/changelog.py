@@ -198,6 +198,17 @@ class Changelog:
         if "repo.url" in history_map and history_map["repo.url"] != config.repo.url:
             self._logger.debug("Change detected: Package 'repo.url' field updated.")
             bullet_lines.append(f"  * Modified repo.url: {config.repo.url}")
+
+        if "repo.suites" in history_map and history_map["repo.suites"] != config.repo.suites:
+            self._logger.debug("Change detected: Package 'repo.suites' field updated.")
+            bullet_lines.append(f"  * Modified repo.suites: {config.repo.suites}")
+
+        if "repo.components" in history_map and history_map["repo.components"] != config.repo.components:
+            self._logger.debug("Change detected: Package 'repo.components' field updated.")
+            bullet_lines.append(f"  * Modified repo.components: {config.repo.components}")
+
+        if "repo.key_url" in history_map and history_map["repo.key_url"] != config.repo.key_url:
+            self._logger.debug("Change detected: Package 'repo.key_url' field updated.")
             bullet_lines.append(f"  * Modified repo.key_url: {config.repo.key_url}")
 
         prev_dynamic = history_map.get("dynamic_keyring") == "true"
@@ -264,6 +275,15 @@ class Changelog:
             )
 
         self._logger.info(f"Successfully reverse-engineered model snapshot for version: {version}")
+
+        # Scroll to the bottom of the to_package_config method body
+        repo_config = PackageRepoConfig(
+            url=history_map.get("repo.url", ""),
+            suites=history_map.get("repo.suites", ""),
+            components=history_map.get("repo.components", ""),
+            key_url=history_map.get("repo.key_url", ""),
+        )
+
         return PackageConfig(
             name=package_name,
             version=version,
