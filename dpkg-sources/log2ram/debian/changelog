@@ -1,0 +1,12 @@
+log2ram (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=Automatically configures the log2ram repository.
+  * copyright_year=2026
+  * dynamic_keyring=false
+  * repo.url=http://packages.azlux.fr/debian/
+  * repo.suites=${TARGET_CODENAME}
+  * repo.components=main
+  * repo.key_url=https://azlux.fr/repo.gpg
+
+ -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 07:24:38 -0500
