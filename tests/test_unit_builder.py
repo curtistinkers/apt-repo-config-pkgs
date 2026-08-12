@@ -7,6 +7,7 @@ generation layer managed by the DebianPackageBuilder class.
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from package_generator import (
@@ -180,3 +181,45 @@ def test_builder_persists_and_increments_existing_changelog_on_disk(
     # 3. ASSERTIONS: Verify the file on disk was incremented to v2 perfectly
     assert existing_changelog_file.exists()
     assert existing_changelog_file.read_text(encoding="utf-8").strip() == changelog_v2.strip()
+
+def test_builder_throws_emergency_error_if_changelog_template_exists(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the builder panics if a changelog file exists in templates.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a baseline manifest string.
+        project_config: A test fixture providing a valid raw project YAML string.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    raw_manifest = yaml.safe_load(manifest_v1)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+
+    raw_project = yaml.safe_load(project_config)
+    project_manifest = ProjectManifest(raw_data=raw_project, logger=silent_logger)
+
+    templates_dir = tmp_path / "templates" / "debian"
+    templates_dir.mkdir(parents=True)
+
+    # SETUP: Violate the architecture by dropping a rogue changelog file into templates
+    (templates_dir / "changelog").write_text("", encoding="utf-8")
+
+    compiler = DebianTemplateCompiler(templates_dir=templates_dir, logger=silent_logger)
+    sources_dir = tmp_path / "dpkg-sources"
+
+    builder = DebianPackageBuilder(
+        sources_dir=sources_dir,
+        logger=silent_logger,
+        compiler=compiler,
+    )
+
+    # ASSERTION: The builder must raise a ValueError and refuse to compile the tree
+    with pytest.raises(ValueError, match="A template named 'changelog' was discovered"):
+        builder.create_package_tree(
+            config=manifest.config,
+            project_config=project_manifest.config,
+        )

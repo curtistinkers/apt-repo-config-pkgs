@@ -52,6 +52,11 @@ class DebianPackageBuilder:
         Returns:
             The resolved physical Path object targeting the package's internal
             debian/ directory container.
+
+        Raises:
+            ValueError: If a static template file named 'changelog' is discovered
+                inside the templates directory tracks, breaking the dynamic state
+                ledger compilation engine boundaries.
         """
         self._logger.debug(f"Initializing directory layout compilation for package: {config.name}")
 
@@ -83,15 +88,22 @@ class DebianPackageBuilder:
         with open(changelog_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
             file_stream.write(updated_changelog_content)
 
-        # 2. RENDER THE REST OF THE DEBIAN TEMPLATE PLATES POOL
+                # 2. RENDER THE REST OF THE DEBIAN TEMPLATE PLATES POOL
         self._logger.debug("Dynamically discovering available system template assets...")
         available_templates = self._compiler._env.list_templates()
 
         for template_name in available_templates:
-            # Skip manual control processing if the template named 'changelog' is found in templates,
-            # since our object-oriented layer now manages changelog composition explicitly
+            # FIX: Convert the silent bypass into a hard architecture guard rail exception
             if template_name == "changelog":
-                continue
+                self._logger.emergency(
+                    "Fatal architecture violation: A static template named 'changelog' "
+                    "was discovered inside the templates pool directory. Changelog generation "
+                    "must be handled exclusively by the object-oriented state ledger engine."
+                )
+                raise ValueError(
+                    "A template named 'changelog' was discovered inside your templates directory. "
+                    "Remove this asset to clear the package building gatekeeper."
+                )
 
             self._logger.debug(f"Processing and compiling workspace template line: {template_name}")
 
