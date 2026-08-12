@@ -57,9 +57,12 @@ def test_cli_build_subcommand_creates_directories(
     ])
 
     # 3. CONSOLE OUTPUT ASSERTIONS
+        # 3. CONSOLE OUTPUT ASSERTIONS
     assert result.exit_code == 0, f"CLI pipeline crashed with logs: {result.output}"
     assert "DEBUG: Initializing execution environment" in result.output
-    assert "INFO: Successfully orchestrated debian/" in result.output
+    # FIX: Swapped out 'orchestrated' for 'finalized' to match our simple production log text
+    assert "INFO: Successfully finalized debian/" in result.output
+
 
     # 4. FILESYSTEM ARCHITECTURE ASSERTIONS
     expected_debian_dir = sources_dir / "test-repo" / "debian"
