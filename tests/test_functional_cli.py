@@ -613,3 +613,38 @@ def test_cli_auto_bumps_natively_via_flag_option(
 
     updated_yaml_content = modified_manifest_file.read_text(encoding="utf-8")
     assert "version: 1.0.2" in updated_yaml_content
+
+def test_cli_re_raises_genuine_value_errors_like_rogue_templates(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the CLI re-raises true architectural template panics."""
+    runner = CliRunner()
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    # SETUP: Violate the template contract by placing a changelog file in templates
+    real_templates_root = tmp_path / "templates" / "debian"
+    real_templates_root.mkdir(parents=True)
+    (real_templates_root / "changelog").write_text("", encoding="utf-8")
+
+    # EXECUTION: This must abort with exit code 1 because the error is re-raised
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(project_file),
+        "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(tmp_path / "templates"),
+        "--sources-dir", str(sources_dir),
+        "--debug"
+    ])
+
+    assert result.exit_code == 1
+    assert "Fatal architecture violation" in result.output
