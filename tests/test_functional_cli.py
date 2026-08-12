@@ -12,7 +12,7 @@ from click.testing import CliRunner
 from package_generator.cli import main_cli
 
 
-def test_cli_build_subcommand_orchestrates_directories_end_to_end(
+def test_cli_build_subcommand_creates_directories(
     tmp_path: Path,
     manifest_v1: str,
     project_config: str,
@@ -27,30 +27,31 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
         manifest_v1: A test fixture providing a valid raw manifest YAML string.
         project_config: A test fixture providing a valid raw project YAML string.
     """
-    # Establish physical input and output directory structures in our sandbox
-    manifests_dir = tmp_path / "manifests"
-    sources_dir = tmp_path / "sources"
-    manifests_dir.mkdir(parents=True)
+    # Initialize an isolated Click command test runner
+    runner = CliRunner()
 
-    # Define and write your global project configuration file to the sandbox
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Create a project manifest file
     project_file = tmp_path / "project.yaml"
     project_file.write_text(project_config, encoding="utf-8")
 
-    # Write our perfect manifest fixture directly onto the disk platter
+    # Write out a repository manifest file
     manifest_file = manifests_dir / "test-repo.yaml"
     manifest_file.write_text(manifest_v1, encoding="utf-8")
 
-    # Import our CLI entrypoint and trigger the runner invocation
-    runner = CliRunner()
+    # Get the real templates directory
+    templates_dir = Path(__file__).parents[1] / "templates"
 
-    # Locate our real repository template directories root safely
-    real_templates_root = Path(__file__).parents[1] / "templates"
-
+    # Run the build command
     result = runner.invoke(main_cli, [
         "build",
         "--project-config", str(project_file),
         "--manifests-dir", str(manifests_dir),
-        "--templates-dir", str(real_templates_root),
+        "--templates-dir", str(templates_dir),
         "--sources-dir", str(sources_dir),
         "--debug"
     ])
@@ -65,6 +66,208 @@ def test_cli_build_subcommand_orchestrates_directories_end_to_end(
     assert expected_debian_dir.exists(), "The build run failed to create directories."
     assert expected_debian_dir.is_dir(), "The target destination path is not a valid directory."
 
+def test_cli_builds_control_file(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the build command compiles a valid control file.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a static keyring manifest.
+        project_config: A test fixture providing a valid raw project YAML string.
+    """
+    # Initialize an isolated Click command test runner
+    runner = CliRunner()
+
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Create a project manifest file
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    # Write out a repository manifest file
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    # Get the real templates directory
+    templates_dir = Path(__file__).parents[1] / "templates"
+
+    # Run the build command
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(project_file),
+        "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(templates_dir),
+        "--sources-dir", str(sources_dir)
+    ])
+
+    assert result.exit_code == 0, f"Control build run failed: {result.output}"
+
+    expected_debian_dir = sources_dir / "test-repo" / "debian"
+    control_file = expected_debian_dir / "control"
+
+    # Verify the physical file asset exists on the disk platter
+    assert control_file.exists(), "The builder failed to generate the debian/copyright file."
+
+    # Capture your actual generated output text block
+    control_content = control_file.read_text(encoding="utf-8")
+
+    # 2. Define the exact, literal multiline expectation layout
+    expected_text1 = (
+        "Source: test-repo-repo-config\n"
+        "Section: utils\n"
+        "Priority: optional\n"
+        "Maintainer: Alice <alice@example.com>\n"
+        "Build-Depends: debhelper-compat (= 13)\n"
+        "Standards-Version: 4.6.2\n"
+        "\n"
+        "Package: test-repo-repo-config\n"
+        "Architecture: all\n"
+        "Depends: ${misc:Depends}, wget, gnupg\n"
+        "Description: Test repository package layout configuration.\n"
+        " This package automatically manages the APT repository configuration and\n"
+        " secure cryptographic keyrings for test-repo."
+    )
+
+    # 3. Assert the exact match natively
+    assert control_content == expected_text1
+
+
+def test_cli_builds_copyright_file(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the build command compiles a valid copyright file.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a static keyring manifest.
+        project_config: A test fixture providing a valid raw project YAML string.
+    """
+    # Initialize an isolated Click command test runner
+    runner = CliRunner()
+
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Create a project manifest file
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    # Write out a repository manifest file
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    # Get the real templates directory
+    templates_dir = Path(__file__).parents[1] / "templates"
+
+    # Run the build command
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(project_file),
+        "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(templates_dir),
+        "--sources-dir", str(sources_dir)
+    ])
+
+    assert result.exit_code == 0, f"Control build run failed: {result.output}"
+
+    expected_debian_dir = sources_dir / "test-repo" / "debian"
+    copyright_file = expected_debian_dir / "copyright"
+
+    # Verify the physical file asset exists on the disk platter
+    assert copyright_file.exists(), "The builder failed to generate the debian/copyright file."
+
+    # Capture your actual generated output text block
+    copyright_content = copyright_file.read_text(encoding="utf-8")
+
+    # Define the exact, literal multiline expectation layout
+    expected_text = (
+        "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/\n"
+        "Source: https://git.example.com/alice/deb-repo-config-packages/dpkg-sources/test-repo\n"
+        "Upstream-Name: test-repo-repo-config\n"
+        "Upstream-Contact: Alice <alice@example.com>\n"
+        "\n"
+        "Files: *\n"
+        "Copyright: 2024 Alice <alice@example.com>"
+    )
+
+    # Check that your short snippet exists inside the large generated text block
+    assert expected_text in copyright_content
+
+
+def test_cli_builds_rules_file(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the build command compiles a valid rules file.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a static keyring manifest.
+        project_config: A test fixture providing a valid raw project YAML string.
+    """
+    # Initialize an isolated Click command test runner
+    runner = CliRunner()
+
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Create a project manifest file
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    # Write out a repository manifest file
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    # Get the real templates directory
+    templates_dir = Path(__file__).parents[1] / "templates"
+
+    # Run the build command
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(project_file),
+        "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(templates_dir),
+        "--sources-dir", str(sources_dir)
+    ])
+
+    assert result.exit_code == 0, f"Control build run failed: {result.output}"
+
+    expected_debian_dir = sources_dir / "test-repo" / "debian"
+    rules_file = expected_debian_dir / "rules"
+
+    # Verify the physical file asset exists on the disk platter
+    assert rules_file.exists(), "The builder failed to generate the debian/rules file."
+
+    # Capture your actual generated output text block
+    rules_content = rules_file.read_text(encoding="utf-8")
+
+    # Define the exact, literal multiline expectation layout
+    expected_text = (
+        "#!/usr/bin/make -f\n"
+        "\n"
+        "# The '%' symbol acts as a wildcard catching all build stages (clean, build, binary).\n"
+        "# 'dh $@' passes execution directly to Debhelper, automating the entire Debian lifecycle.\n"
+        "%:\n"
+        "\tdh $@"
+    )
+
+    # Check that your short snippet exists inside the large generated text block
+    assert rules_content == expected_text
+
 
 def test_cli_builds_static_keyring_packages(
     tmp_path: Path,
@@ -78,28 +281,32 @@ def test_cli_builds_static_keyring_packages(
         manifest_v1: A test fixture providing a static keyring manifest.
         project_config: A test fixture providing a valid raw project YAML string.
     """
-    # Set up sandbox inputs and outputs
-    manifests_dir = tmp_path / "manifests"
-    sources_dir = tmp_path / "sources"
-    manifests_dir.mkdir(parents=True)
+    # Initialize an isolated Click command test runner
+    runner = CliRunner()
 
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Create a project manifest file
     project_file = tmp_path / "project.yaml"
     project_file.write_text(project_config, encoding="utf-8")
 
+    # Write out a repository manifest file
     manifest_file = manifests_dir / "test-repo.yaml"
     manifest_file.write_text(manifest_v1, encoding="utf-8")
 
-    runner = CliRunner()
-    real_templates_root = Path(__file__).parents[1] / "templates"
+    # Get the real templates directory
+    templates_dir = Path(__file__).parents[1] / "templates"
 
     # Run the build command
     result = runner.invoke(main_cli, [
         "build",
         "--project-config", str(project_file),
         "--manifests-dir", str(manifests_dir),
-        "--templates-dir", str(real_templates_root),
-        "--sources-dir", str(sources_dir),
-        "--debug"
+        "--templates-dir", str(templates_dir),
+        "--sources-dir", str(sources_dir)
     ])
 
     assert result.exit_code == 0, f"Static build failed: {result.output}"
@@ -144,28 +351,32 @@ def test_cli_builds_dynamic_keyring_packages(
         manifest_v3: A test fixture providing a dynamic keyring manifest.
         project_config: A test fixture providing a valid raw project YAML string.
     """
-    # Set up sandbox inputs and outputs
-    manifests_dir = tmp_path / "manifests_dynamic"
-    sources_dir = tmp_path / "sources_dynamic"
-    manifests_dir.mkdir(parents=True)
+    # Initialize an isolated Click command test runner
+    runner = CliRunner()
 
+    # Create safe sandbox folders
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Create a project manifest file
     project_file = tmp_path / "project.yaml"
     project_file.write_text(project_config, encoding="utf-8")
 
-    manifest_file = manifests_dir / "test-repo-dynamic.yaml"
+    # Write out a repository manifest file
+    manifest_file = manifests_dir / "test-repo.yaml"
     manifest_file.write_text(manifest_v3, encoding="utf-8")
 
-    runner = CliRunner()
-    real_templates_root = Path(__file__).parents[1] / "templates"
+    # Get the real templates directory
+    templates_dir = Path(__file__).parents[1] / "templates"
 
     # Run the build command
     result = runner.invoke(main_cli, [
         "build",
         "--project-config", str(project_file),
         "--manifests-dir", str(manifests_dir),
-        "--templates-dir", str(real_templates_root),
-        "--sources-dir", str(sources_dir),
-        "--debug"
+        "--templates-dir", str(templates_dir),
+        "--sources-dir", str(sources_dir)
     ])
 
     assert result.exit_code == 0, f"Dynamic build failed: {result.output}"
@@ -199,3 +410,55 @@ def test_cli_builds_dynamic_keyring_packages(
     # Dynamic builds should not mention the static key paths inside the install map
     install_content = install_file.read_text(encoding="utf-8")
     assert "test-repo-archive-keyring.gpg" not in install_content
+
+def test_cli_builds_os_normalization_rules(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the build command compiles valid OS normalization case rules.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a standard repository manifest.
+        project_config: A test fixture providing a valid raw project YAML string.
+    """
+    manifests_dir = tmp_path / "manifests_normalization"
+    sources_dir = tmp_path / "sources_normalization"
+    manifests_dir.mkdir(parents=True)
+
+    project_file = tmp_path / "project.yaml"
+    project_file.write_text(project_config, encoding="utf-8")
+
+    manifest_file = manifests_dir / "test-repo.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    runner = CliRunner()
+    real_templates_root = Path(__file__).parents[1] / "templates"
+
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(project_file),
+        "--manifests-dir", str(manifests_dir),
+        "--templates-dir", str(real_templates_root),
+        "--sources-dir", str(sources_dir),
+        "--debug"
+    ])
+
+    assert result.exit_code == 0, f"Normalization build run failed: {result.output}"
+
+    expected_debian_dir = sources_dir / "test-repo" / "debian"
+    postinst_file = expected_debian_dir / "postinst"
+
+    assert postinst_file.exists()
+
+    postinst_content = postinst_file.read_text(encoding="utf-8")
+
+    # Assert that the exact case blocks we expect from manifest_v1 are present
+    assert "pop|linuxmint)" in postinst_content
+    assert 'TARGET_DIST="ubuntu"' in postinst_content
+    assert 'TARGET_CODENAME="${UBUNTU_CODENAME}"' in postinst_content
+
+    assert "raspbian)" in postinst_content
+    assert 'TARGET_DIST="debian"' in postinst_content
+    assert 'TARGET_CODENAME="${VERSION_CODENAME}"' in postinst_content
