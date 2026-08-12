@@ -41,12 +41,14 @@ def cli_sandbox(
     # Locate the real production templates folder track layout
     templates_dir = Path(__file__).parents[1] / "templates"
 
-    # Globally mock network fetches and dearmoring to secure all tests in this file
+    # FIX: Update the patcher target to use our new binary method contract name
     mock_download_patcher = patch(
-        "package_generator.downloader.Downloader.download_text", return_value="MOCK_ASCII_KEY"
+        "package_generator.downloader.Downloader.download_bytes",
+        return_value=b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY"
     )
     mock_dearmor_patcher = patch(
-        "package_generator.gpg.GpgEngine.dearmor", return_value=b"MOCK_BINARY_BYTES"
+        "package_generator.gpg.GpgEngine.dearmor",
+        return_value=b"MOCK_BINARY_BYTES"
     )
 
     mock_download_patcher.start()

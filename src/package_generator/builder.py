@@ -22,7 +22,7 @@ class DebianPackageBuilder:
     def __init__(
         self,
         sources_dir: Path,
-        logger: "Logger",  # Using standard generic to prevent circular import layout paths
+        logger: "Logger",  # Prevent circular import layout paths
         compiler: DebianTemplateCompiler,
         downloader: Downloader | None = None,
         gpg_engine: GpgEngine | None = None,
@@ -34,6 +34,8 @@ class DebianPackageBuilder:
                 source trees are compiled on disk.
             logger: An injected PSR-3 compliant diagnostic logging service.
             compiler: An injected template compilation engine service instance.
+            downloader: Optional custom network resource downloader engine service.
+            gpg_engine: Optional custom cryptographic PPG dearmoring engine service.
         """
         self._sources_dir = sources_dir
         self._logger = logger
@@ -58,18 +60,13 @@ class DebianPackageBuilder:
         Returns:
             The resolved physical Path object targeting the package's internal
             debian/ directory container.
-
-        Raises:
-            ValueError: If a static template file named 'changelog' is discovered
-                inside the templates directory tracks, breaking the dynamic state
-                ledger compilation engine boundaries.
         """
         self._logger.debug(f"Initializing directory layout compilation for package: {config.name}")
 
         package_root_dir = self._sources_dir / config.name
         target_debian_dir = package_root_dir / "debian"
 
-        # Check for pre-existing history tracking files BEFORE wiping or creating directories
+        # Check for pre-existing history tracking files BEFORE creating directories
         changelog_file_path = target_debian_dir / "changelog"
         existing_history_text = ""
 
@@ -80,8 +77,38 @@ class DebianPackageBuilder:
         # Physically create the directory structures safely on the platter
         target_debian_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. ORCHESTRATE CHANGELOG LIFECYCLE TRACKING PERSISTENCE
-        # Feed existing history or blank slate into the dynamic diff assembler engine
+        # Execute broken-down sub-orchestration helper functions
+        self._orchestrate_changelog(
+            changelog_file_path=changelog_file_path,
+            existing_history_text=existing_history_text,
+            config=config,
+            project_config=project_config,
+            current_time=current_time,
+        )
+
+        self._process_signing_key(
+            target_debian_dir=target_debian_dir,
+            config=config,
+        )
+
+        self._compile_templates(
+            target_debian_dir=target_debian_dir,
+            config=config,
+            project_config=project_config,
+        )
+
+        self._logger.info(f"Successfully finalized debian/ container at: {target_debian_dir}")
+        return target_debian_dir
+
+    def _orchestrate_changelog(
+        self,
+        changelog_file_path: Path,
+        existing_history_text: str,
+        config: PackageConfig,
+        project_config: ProjectConfig,
+        current_time: str | None,
+    ) -> None:
+        """Handles reading, calculating, and saving the dynamic version changelog ledger."""
         changelog_handler = Changelog(raw_text=existing_history_text, logger=self._logger)
 
         updated_changelog_content = changelog_handler.generate_next_version(
@@ -90,33 +117,50 @@ class DebianPackageBuilder:
             current_time=current_time,
         )
 
-        # Write out the persistent, incremented changelog ledger with strict Unix newlines
         with open(changelog_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
             file_stream.write(updated_changelog_content)
 
-        if not config.dynamic_keyring:
-            self._logger.info(
-                f"Static keyring strategy verified for '{config.name}'. Extracting signing assets..."
-            )
+    def _process_signing_key(self, target_debian_dir: Path, config: PackageConfig) -> None:
+        """Downloads, checks armor status, and persists the security keyring to disk."""
+        if config.dynamic_keyring:
+            return
 
-            raw_ascii_armor_text = self._downloader.download_text(url=config.repo.key_url)
-            binary_key_bytes = self._gpg_engine.dearmor(ascii_text=raw_ascii_armor_text)
+        self._logger.info(
+            f"Static keyring strategy verified for '{config.name}'. Extracting signing assets..."
+        )
 
-            keyrings_dir = target_debian_dir / "usr" / "share" / "keyrings"
-            keyrings_dir.mkdir(parents=True, exist_ok=True)
+        # 1. Download raw bytes directly from the network wire
+        raw_bytes = self._downloader.download_bytes(url=config.repo.key_url)
 
-            output_key_file = keyrings_dir / f"{config.name}-archive-keyring.gpg"
-            output_key_file.write_bytes(binary_key_bytes)
-            self._logger.debug(
-                f"Successfully recorded static binary signing asset on disk path: {output_key_file}"
-            )
+        # 2. Check the signature prefix directly within this orchestration routine
+        if raw_bytes.startswith(b"-----BEGIN PGP"):
+            self._logger.debug("Payload is ASCII armored text. Invoking GpgEngine dearmor filter.")
+            binary_key_bytes = self._gpg_engine.dearmor(ascii_text=raw_bytes.decode("utf-8"))
+        else:
+            self._logger.debug("Payload is already raw binary data. Bypassing dearmor filter.")
+            binary_key_bytes = raw_bytes
 
-        # 2. RENDER THE REST OF THE DEBIAN TEMPLATE PLATES POOL
+        # 3. Commit the verified binary keyring to disk
+        keyrings_dir = target_debian_dir / "usr" / "share" / "keyrings"
+        keyrings_dir.mkdir(parents=True, exist_ok=True)
+
+        output_key_file = keyrings_dir / f"{config.name}-archive-keyring.gpg"
+        output_key_file.write_bytes(binary_key_bytes)
+        self._logger.debug(
+            f"Successfully recorded static binary signing asset on disk path: {output_key_file}"
+        )
+
+    def _compile_templates(
+        self,
+        target_debian_dir: Path,
+        config: PackageConfig,
+        project_config: ProjectConfig,
+    ) -> None:
+        """Iterates over available templates and renders them to the workspace container."""
         self._logger.debug("Dynamically discovering available system template assets...")
         available_templates = self._compiler._env.list_templates()
 
         for template_name in available_templates:
-            # FIX: Convert the silent bypass into a hard architecture guard rail exception
             if template_name == "changelog":
                 self._logger.emergency(
                     "Fatal architecture violation: A static template named 'changelog' "
@@ -142,15 +186,8 @@ class DebianPackageBuilder:
             with open(output_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
                 file_stream.write(compiled_text_stream)
 
-        self._logger.info(f"Successfully finalized debian/ container at: {target_debian_dir}")
-        return target_debian_dir
-
     def remove_package_tree(self) -> None:
-        """Safely removes the targeted sources directory tree from the filesystem.
-
-        Handles folders containing active build configuration files and nested
-        sub-directories layout structures.
-        """
+        """Safely removes the targeted sources directory tree from the filesystem."""
         self._logger.debug(
             f"Initializing complete directory tree purge at path: {self._sources_dir}"
         )

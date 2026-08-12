@@ -1,7 +1,6 @@
-# src/package_generator/downloader.py
 """Network resource retrieval coordinator.
 
-Handles light socket requests to fetch remote text content profiles cleanly
+Handles light socket requests to fetch remote content profiles cleanly
 from external web repositories using standard library tooling.
 """
 
@@ -21,14 +20,14 @@ class Downloader:
         """
         self._logger = logger
 
-    def download_text(self, url: str) -> str:
-        """Fetches remote file string payloads cleanly over a network stream socket.
+    def download_bytes(self, url: str) -> bytes:
+        """Fetches remote file payloads cleanly over a network stream socket.
 
         Args:
             url: The absolute target URL address path to download from.
 
         Returns:
-            The raw decoded text content stream downloaded from the endpoint.
+            The raw octet binary byte stream downloaded from the endpoint.
         """
         self._logger.info(f"Initiating remote data stream fetch from URL: {url}")
 
@@ -41,4 +40,4 @@ class Downloader:
             payload_bytes = response.read()
 
         self._logger.debug(f"Successfully retrieved {len(payload_bytes)} raw octet payload bytes.")
-        return payload_bytes.decode("utf-8")
+        return payload_bytes

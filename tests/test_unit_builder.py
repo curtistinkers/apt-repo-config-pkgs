@@ -41,10 +41,13 @@ def mock_builder_ctx(tmp_path: Path) -> tuple[DebianPackageBuilder, MagicMock, M
 
     # Configure our uniform network and crypto mocks
     downloader = MagicMock()
-    downloader.download_text.return_value = "MOCK_ASCII_KEY"
+
+    # We prefix with ASCII headers so default fixture runs go down the dearmor track cleanly
+    downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY"
 
     gpg_engine = MagicMock()
     gpg_engine.dearmor.return_value = b"MOCK_BINARY_BYTES"
+
 
     builder = DebianPackageBuilder(
         sources_dir=sources_dir,
@@ -235,24 +238,23 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
         manifest_v1: A test fixture providing a static baseline config manifest string.
-        project_config: A test fixture providing a valid raw project YAML string.
     """
-    # 1. SETUP: Extract pre-configured builder and mock hooks from our shared setup fixture
+    # 1. SETUP: Extract pre-configured components directly from our shared setup fixture
     builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger = Logger(min_terminal_level="emergency")
 
-    # Configure our mocks specifically for this test's unique string expectations
-    mock_downloader.download_text.return_value = "MOCK_ASCII_KEY_CONTENT"
+    # FIX 1: Do NOT overwrite with MagicMock(). Configure the fixture's mocks directly:
+    mock_downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT"
     mock_gpg.dearmor.return_value = b"MOCK_BINARY_DEARMORED_BYTES"
 
     raw_manifest = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger)
 
     # Ground the test: verify our v1 fixture has dynamic_keyring set to False
     assert manifest.config.dynamic_keyring is False
 
     raw_project = yaml.safe_load(project_config)
-    project_manifest = ProjectManifest(raw_data=raw_project, logger=silent_logger)
+    project_manifest = ProjectManifest(raw_data=raw_project, logger=logger)
 
     # 3. EXECUTION: Run the folder structure tree compilation pass
     target_debian_dir = builder.create_package_tree(
@@ -265,13 +267,94 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
         target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
     )
 
-    # Verify that the builder queried our downloader using the manifest's URL
-    mock_downloader.download_text.assert_called_once_with(url="https://example.com/signing.gpg")
+    # FIX 2: Sync the exact endpoint file path URL string matching manifest_v1
+    mock_downloader.download_bytes.assert_called_once_with(url="https://example.com/signing.gpg")
 
     # Verify that the builder fed that raw text straight into the GPG dearmor engine
-    mock_gpg.dearmor.assert_called_once_with(ascii_text="MOCK_ASCII_KEY_CONTENT")
+    # Note: We slice off headers if your production code decodes it first
+    mock_gpg.dearmor.assert_called_once_with(ascii_text="-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT")
 
     # Verify that the resulting binary bytes were physically written to the expected path
     assert expected_key_file.exists()
     assert expected_key_file.read_bytes() == b"MOCK_BINARY_DEARMORED_BYTES"
 
+
+
+def test_builder_invokes_dearmor_when_key_payload_starts_with_ascii_headers(
+    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the builder sends payloads to GpgEngine if armor headers match.
+
+    Ensures that when download_bytes returns a stream beginning with ASCII text
+    headers, the orchestrator routes it to the cryptographic dearmoring filter.
+    """
+    builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # 1. SETUP: Configure the network downloader mock to return text armor bytes
+    mock_downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQEN..."
+    mock_gpg.dearmor.return_value = b"MOCK_FILTERED_BINARY_BYTES"
+
+    raw_manifest = yaml.safe_load(manifest_v1)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+    project_manifest = ProjectManifest(
+        raw_data=yaml.safe_load(project_config),
+        logger=silent_logger
+    )
+
+    # 2. EXECUTION: Drive the compilation loop pass
+    target_debian_dir = builder.create_package_tree(
+        config=manifest.config,
+        project_config=project_manifest.config,
+    )
+
+    # 3. ASSERTIONS: Verify the crypto engine was called and the result was saved
+    mock_gpg.dearmor.assert_called_once_with(
+        ascii_text="-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQEN..."
+    )
+
+    expected_file = (
+        target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
+    )
+    assert expected_file.read_bytes() == b"MOCK_FILTERED_BINARY_BYTES"
+
+
+def test_builder_bypasses_dearmor_when_key_payload_is_already_raw_binary(
+    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    manifest_v1: str,
+    project_config: str,
+) -> None:
+    """Verifies that the builder writes binary public keys straight to disk.
+
+    Ensures that when download_bytes returns a raw pre-compiled binary stream,
+    the orchestrator skips GpgEngine entirely and saves the raw payload bytes.
+    """
+    builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # 1. SETUP: Configure the network downloader mock to return non-armored binary bytes
+    mock_raw_binary_payload = b"\x99\x01\x00_RAW_UNARMORED_BINARY_STREAM"
+    mock_downloader.download_bytes.return_value = mock_raw_binary_payload
+
+    raw_manifest = yaml.safe_load(manifest_v1)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+    project_manifest = ProjectManifest(
+        raw_data=yaml.safe_load(project_config),
+        logger=silent_logger
+    )
+
+    # 2. EXECUTION: Drive the compilation loop pass
+    target_debian_dir = builder.create_package_tree(
+        config=manifest.config,
+        project_config=project_manifest.config,
+    )
+
+    # 3. ASSERTIONS: Verify the crypto engine was completely bypassed
+    assert not mock_gpg.dearmor.called
+
+    expected_file = (
+        target_debian_dir / "usr" / "share" / "keyrings" / "test-repo-archive-keyring.gpg"
+    )
+    assert expected_file.read_bytes() == mock_raw_binary_payload
