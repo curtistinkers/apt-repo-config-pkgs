@@ -10,10 +10,18 @@ from package_generator import Logger, RepositoryManifest
 @pytest.mark.parametrize(
     "missing_key,expected_error",
     [
-        ("description", "Mandatory root key 'description' is missing"),
-        ("copyright_year", "Mandatory root key 'copyright_year' is missing"),
-        ("suites", "Mandatory repo child key 'suites' is missing"),
-        ("set_codename", "Mandatory mapping child key 'set_codename' is missing"),
+        ("description", "Mandatory root key 'description' is missing."),
+        ("copyright_year", "Mandatory root key 'copyright_year' is missing."),
+        ("suites", "Mandatory repo child key 'suites' is missing."),
+        (
+            "codename",
+            "Mandatory child property 'codename' is missing or "
+            "empty inside the 'os_mappings.pop' block."
+        ),
+        (
+            "malformed_inner_map",
+            "Rule content for 'pop|linuxmint' must be a map."
+        ),
     ]
 )
 def test_manifest_invalid_schema_fixture_fails_validation(
@@ -43,13 +51,20 @@ def test_manifest_invalid_schema_fixture_fails_validation(
         raw_data["repo"]["components"] = "main"
         raw_data["repo"]["key_url"] = "https://example.com"
 
+    # FIX 2: Localized handler injects the malformed inner string primitive data on cue
+    if missing_key == "malformed_inner_map":
+        raw_data["os_mappings"] = {"pop|linuxmint": "invalid_raw_string_primitive"}
+
     # Initialize a real, quiet logger dependency
     silent_logger = Logger(min_terminal_level="emergency")
 
     with pytest.raises(ValueError) as error_context:
         RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
-    assert expected_error in str(error_context.value)
+    expected_message = "Manifest schema violation: " + expected_error
+
+    assert expected_message == str(error_context.value)
+
 
 
 def test_repository_manifest_compiles_valid_dvo_hierarchy(manifest_v1: str) -> None:
@@ -84,16 +99,10 @@ def test_repository_manifest_compiles_valid_dvo_hierarchy(manifest_v1: str) -> N
 
     # Check that individual operating system collection mapping DVOs track accurately
     assert len(manifest.config.os_mappings) == 2
-    assert manifest.config.os_mappings[0].match == "pop|linuxmint"
-    assert manifest.config.os_mappings[0].set_dist == "ubuntu"
-    assert manifest.config.os_mappings[0].set_codename == "${UBUNTU_CODENAME}"
-    assert manifest.config.os_mappings[1].match == "raspbian"
-    assert manifest.config.os_mappings[1].set_dist == "debian"
-    assert manifest.config.os_mappings[1].set_codename == "${VERSION_CODENAME}"
-
-    assert not manifest.config.os_mappings[0].match == "fake_flavor"
-    assert not manifest.config.os_mappings[0].set_dist == "fake_distro"
-    assert not manifest.config.os_mappings[0].set_codename == "${FAKE_VARIABLE}"
+    assert manifest.config.os_mappings['pop|linuxmint'].distro == "ubuntu"
+    assert manifest.config.os_mappings['pop|linuxmint'].codename == "${UBUNTU_CODENAME}"
+    assert manifest.config.os_mappings['raspbian'].distro == "debian"
+    assert manifest.config.os_mappings['raspbian'].codename == "${VERSION_CODENAME}"
 
 
 def test_manifest_rejects_non_dictionary_repo_block(manifest_invalid_repo_type: str) -> None:
@@ -110,7 +119,9 @@ def test_manifest_rejects_non_dictionary_repo_block(manifest_invalid_repo_type: 
     with pytest.raises(ValueError) as error_context:
         RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
-    assert "Mandatory child block 'repo' is missing or invalid" in str(error_context.value)
+    expected_message = "Manifest schema violation: Mandatory child block 'repo' is missing."
+
+    assert expected_message == str(error_context.value)
 
 
 def test_manifest_rejects_non_list_os_mappings_block(manifest_invalid_mappings_type: str) -> None:
@@ -128,7 +139,9 @@ def test_manifest_rejects_non_list_os_mappings_block(manifest_invalid_mappings_t
     with pytest.raises(ValueError) as error_context:
         RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
-    assert "'os_mappings' must be a valid array list structure" in str(error_context.value)
+    expected_message = "Manifest schema violation: 'os_mappings' must be a valid key-value map."
+
+    assert expected_message == str(error_context.value)
 
 
 def test_manifest_rejects_non_dictionary_os_mapping_item(
@@ -148,5 +161,7 @@ def test_manifest_rejects_non_dictionary_os_mapping_item(
     with pytest.raises(ValueError) as error_context:
         RepositoryManifest(raw_data=raw_data, logger=silent_logger)
 
-    assert "must be a dictionary" in str(error_context.value)
+    expected_message = "Manifest schema violation: 'os_mappings' must be a valid key-value map."
+
+    assert expected_message == str(error_context.value)
 

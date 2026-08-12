@@ -1,7 +1,7 @@
 # src/package_generator/models.py
 """Pure, immutable Data Value Objects representing our package and project parameters."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -25,9 +25,8 @@ class PackageRepoConfig:
 @dataclass(frozen=True)
 class PackageOSMappingConfig:
     """A packages operating system normalization rule used during installation."""
-    match: str
-    set_dist: str
-    set_codename: str
+    distro: str
+    codename: str
 
 
 @dataclass(frozen=True)
@@ -39,7 +38,7 @@ class PackageConfig:
     copyright_year: int
     dynamic_keyring: bool
     repo: PackageRepoConfig  # <-- Nested structured value object type-hint
-    os_mappings: list[PackageOSMappingConfig] = field(default_factory=list)
+    os_mappings: dict[str, PackageOSMappingConfig]
 
 @dataclass(frozen=True)
 class ChangelogEntry:

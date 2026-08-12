@@ -53,19 +53,18 @@ class DebianTemplateCompiler:
 
         self._logger.debug("Mapping strongly typed fields into flat template context variables...")
 
-        # Dynamically build out the raw bash case statement rows from our DVO list
+        # Dynamically build out the raw bash case statement rows from our DVO dictionary map
         compiled_rules = []
-        for mapping in package_config.os_mappings:
-            # Emit clear diagnostic trace logs for each mapping row processed
+        for match_key, mapping in package_config.os_mappings.items():
             self._logger.debug(
-                f"Compiling normalization case mapping rule for flavor: [{mapping.match}] "
-                f"-> target dist: '{mapping.set_dist}', codename: '{mapping.set_codename}'"
+                f"Compiling normalization case mapping rule for flavor: [{match_key}] "
+                f"-> target dist: '{mapping.distro}', codename: '{mapping.codename}'"
             )
 
             rule_block = (
-                f"        {mapping.match})\n"
-                f'            TARGET_DIST="{mapping.set_dist}"\n'
-                f'            TARGET_CODENAME="{mapping.set_codename}"\n'
+                f"        {match_key})\n"
+                f'            TARGET_DIST="{mapping.distro}"\n'
+                f'            TARGET_CODENAME="{mapping.codename}"\n'
                 "            ;;"
             )
             compiled_rules.append(rule_block)

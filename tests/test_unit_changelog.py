@@ -455,7 +455,7 @@ def test_changelog_calculates_modified_os_mapping_property_deltas(
 
     # SETUP: Alter 'set_codename' for index 0 and bump version to pass downgrade checks
     raw_manifest_data = yaml.safe_load(manifest_v1)
-    raw_manifest_data["os_mappings"][0]["set_codename"] = "noble"
+    raw_manifest_data["os_mappings"]["pop|linuxmint"]["codename"] = "noble"
     raw_manifest_data["version"] = "1.0.1"
 
     config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
@@ -472,7 +472,7 @@ def test_changelog_calculates_modified_os_mapping_property_deltas(
 
     # ASSERTION: Engine must compute the internal rule change bullet lines successfully
     assert "Modified os_mappings rule matching pop|linuxmint" in compiled_output
-    assert "set_codename=noble" in compiled_output
+    assert "codename=noble" in compiled_output
 
 def test_changelog_reconstructs_static_keyring_toggle_from_text() -> None:
     """Verifies that the engine extracts static keyring toggles from text."""
@@ -489,19 +489,20 @@ def test_changelog_reconstructs_static_keyring_toggle_from_text() -> None:
     config = engine.to_package_config()
     assert config.dynamic_keyring is False
 
-def test_changelog_calculates_modified_os_mapping_dist_property_deltas(
+def test_changelog_calculates_modified_os_mapping_distro_property_deltas(
     manifest_v1: str,
     project_config: str,
     changelog_v1: str,
 ) -> None:
-    """Verifies that the engine detects altered set_dist fields in os_mappings."""
+    """Verifies that the engine detects altered distro fields in os_mappings."""
     silent_logger = Logger(min_terminal_level="emergency")
     changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
 
     raw_manifest_data = yaml.safe_load(manifest_v1)
-    # Alter set_dist instead of set_codename to hit the missing line branch path
-    raw_manifest_data["os_mappings"][0]["set_dist"] = "debian-custom"
+    # Alter distro instead of codename to hit the missing line branch path
+    raw_manifest_data["os_mappings"]["pop|linuxmint"]["distro"] = "debian-custom"
     raw_manifest_data["version"] = "1.0.1"
+
 
     config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
     project_config_dvo = ProjectManifest(
@@ -514,4 +515,5 @@ def test_changelog_calculates_modified_os_mapping_dist_property_deltas(
         current_time="Mon, 10 Aug 2026 13:00:00 +0000"
     )
 
-    assert "set_dist=debian-custom" in compiled_output
+    assert "Modified os_mappings rule matching pop|linuxmint" in compiled_output
+    assert "distro=debian-custom" in compiled_output

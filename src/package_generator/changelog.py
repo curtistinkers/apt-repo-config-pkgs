@@ -99,69 +99,59 @@ class Changelog:
     def _reconstruct_historical_state(self) -> tuple[dict[str, str], set[str]]:
         """Compiles historical entry strings chronologically into a clean state map.
 
-        Iterates backwards through the collection list of parsed changelog entries,
-        from the oldest record to the most recent, accumulating explicit assignments
-        and text delta modifications into a unified final state snapshot dictionary.
-
         Returns:
-            A tuple containing a dictionary of scalar properties mapping configuration keys
-            to their values, and a set of active historical OS mapping match strings.
+            A tuple containing a dictionary of scalar properties and a set of
+            historical OS mapping match strings.
         """
-        # Signal the initialization of the historical accumulator loop
         self._logger.debug(
             "Reconstructing absolute state timeline by compiling history backwards..."
         )
-
         history_map: dict[str, str] = {}
         historical_matches: set[str] = set()
 
         for entry in reversed(self.entries):
-            # Record exactly which historical block version is being collated
             self._logger.debug(f"Collating change bullets from version block: {entry.version}")
 
-            # Parse traditional key=value declarations
             for row in entry.changes.splitlines():
                 clean_row = row.strip().lstrip("*").strip()
                 if "=" in clean_row:
                     h_key, h_val = clean_row.split("=", 1)
                     history_map[h_key.strip()] = h_val.strip()
 
-                if "os_mappings." in clean_row and ".match=" in clean_row:
-                    match_val = clean_row.split(".match=", 1)[1]
-                    historical_matches.add(match_val.strip())
+                    # Dynamically capture historical active match keys from log parameters
+                    if h_key.startswith("os_mappings."):
+                        parts = h_key.split(".")
+                        if len(parts) >= 2:
+                            historical_matches.add(parts[1].strip())
 
             # Accumulate historical macro state updates from human-readable logs
             if "Toggled repository keyring strategy to: dynamic" in entry.changes:
-                # Track a dynamic keyring toggle found in the raw text logs
                 self._logger.debug(
                     f"Tracking state transition: dynamic_keyring=true found at v{entry.version}"
                 )
                 history_map["dynamic_keyring"] = "true"
             elif "Toggled repository keyring strategy to: static" in entry.changes:
-                # Track a static keyring toggle found in the raw text logs
                 self._logger.debug(
                     f"Tracking state transition: dynamic_keyring=false found at v{entry.version}"
                 )
                 history_map["dynamic_keyring"] = "false"
 
             if "Modified description:" in entry.changes:
-                desc_val = entry.changes.split("Modified description:", 1)[1].splitlines()[0]
-                history_map["description"] = desc_val.strip()
+                desc_val = entry.changes.split("Modified description:", 1)[1].splitlines()
+                history_map["description"] = desc_val[0].strip()
 
             if "Modified repo.url:" in entry.changes:
-                url_val = entry.changes.split("Modified repo.url:", 1)[1].splitlines()[0]
-                history_map["repo.url"] = url_val.strip()
+                url_val = entry.changes.split("Modified repo.url:", 1)[1].splitlines()
+                history_map["repo.url"] = url_val[0].strip()
 
             if "Modified repo.key_url:" in entry.changes:
-                key_val = entry.changes.split("Modified repo.key_url:", 1)[1].splitlines()[0]
-                history_map["repo.key_url"] = key_val.strip()
+                key_val = entry.changes.split("Modified repo.key_url:", 1)[1].splitlines()
+                history_map["repo.key_url"] = key_val[0].strip()
 
-            pruned_match = re.search(
-                r"Removed os_mappings rule matching ([^\.\s\n]+)", entry.changes
-            )
+            # Parse structural removal bullets matching: Removed os_mappings.<match_key>.
+            pruned_match = re.search(r"Removed os_mappings\.([^\s\n\.]+)\.", entry.changes)
             if pruned_match:
                 matched_flavor = pruned_match.group(1).strip()
-                # Record when an array rule exclusion is successfully tracked
                 self._logger.debug(
                     f"Tracking state removal: os_mapping '{matched_flavor}' "
                     f"discarded at v{entry.version}"
@@ -170,24 +160,11 @@ class Changelog:
 
         return history_map, historical_matches
 
-
     def _calculate_diff_bullets(self, config: PackageConfig) -> list[str]:
-        """Compares incoming config against historical state to generate bullet lines.
-
-        Inspects the current configuration parameters against the compiled
-        historical baseline state map, determining if changes exist to append
-        descriptive release bullets dynamically.
-
-        Args:
-            config: Incoming type-safe PackageConfig domain value object state
-                to evaluate against historical release milestones.
-
-        Returns:
-            A list of formatted text bullet strings representing structural modifications.
-        """
+        """Compares incoming config against historical state to generate bullet lines."""
         bullet_lines: list[str] = []
 
-        # Case A: Genesis Slate (No historical logs exist)
+        # Case A: Genesis Slate
         if not self.latest_entry:
             self._logger.info(
                 f"Generating genesis release changelog block for: {config.name} ({config.version})"
@@ -200,13 +177,12 @@ class Changelog:
             bullet_lines.append(f"  * repo.suites={config.repo.suites}")
             bullet_lines.append(f"  * repo.components={config.repo.components}")
             bullet_lines.append(f"  * repo.key_url={config.repo.key_url}")
-            for index, mapping in enumerate(config.os_mappings):
-                bullet_lines.append(f"  * os_mappings.{index}.match={mapping.match}")
-                bullet_lines.append(f"  * os_mappings.{index}.set_dist={mapping.set_dist}")
-                bullet_lines.append(f"  * os_mappings.{index}.set_codename={mapping.set_codename}")
+            for match_key, mapping in config.os_mappings.items():
+                bullet_lines.append(f"  * os_mappings.{match_key}.distro={mapping.distro}")
+                bullet_lines.append(f"  * os_mappings.{match_key}.codename={mapping.codename}")
             return bullet_lines
 
-        # Case B: Incremental Delta Calculation (Building on top of history logs)
+        # Case B: Incremental Delta Calculation
         self._logger.info(
             f"Calculating delta differences for version upgrade: "
             f"{self.latest_entry.version} -> {config.version}"
@@ -215,61 +191,87 @@ class Changelog:
         history_map, historical_matches = self._reconstruct_historical_state()
 
         if "description" in history_map and history_map["description"] != config.description:
-            # Record a parameter shift for description text strings
             self._logger.debug("Change detected: Package 'description' field updated.")
             bullet_lines.append(f"  * Modified description: {config.description}")
 
         if "repo.url" in history_map and history_map["repo.url"] != config.repo.url:
-            # Record a parameter shift for repository target URLs
             self._logger.debug("Change detected: Package 'repo.url' field updated.")
             bullet_lines.append(f"  * Modified repo.url: {config.repo.url}")
             bullet_lines.append(f"  * Modified repo.key_url: {config.repo.key_url}")
 
         prev_dynamic = history_map.get("dynamic_keyring") == "true"
         if config.dynamic_keyring != prev_dynamic:
-            # Record a keyring operational strategy toggle branch shift
             self._logger.debug("Change detected: Keyring operational strategy toggled.")
             strategy_name = "dynamic" if config.dynamic_keyring else "static"
             bullet_lines.append(f"  * Toggled repository keyring strategy to: {strategy_name}")
 
         # Track internal updates to properties within active OS mappings
-        current_matches = {m.match for m in config.os_mappings}
-        for index, mapping in enumerate(config.os_mappings):
-            if mapping.match in historical_matches:
-                # Compare incoming internal properties against the reconstructed history snapshot
-                hist_dist = history_map.get(f"os_mappings.{index}.set_dist")
-                hist_codename = history_map.get(f"os_mappings.{index}.set_codename")
+        current_matches = set(config.os_mappings.keys())
+        for match_key, mapping in config.os_mappings.items():
+            if match_key in historical_matches:
+                hist_dist = history_map.get(f"os_mappings.{match_key}.distro")
+                hist_codename = history_map.get(f"os_mappings.{match_key}.codename")
 
-                if (hist_dist and hist_dist != mapping.set_dist) or \
-                   (hist_codename and hist_codename != mapping.set_codename):
+                if (hist_dist and hist_dist != mapping.distro) or \
+                   (hist_codename and hist_codename != mapping.codename):
 
-                    # FIX 2: Wrapped the long string in parenthesis to use implicit concatenation
                     self._logger.debug(
-                        f"Change detected: Properties modified inside "
-                        f"mapping match '{mapping.match}'."
+                        f"Change detected: Properties modified inside rule '{match_key}'."
                     )
-
-                    # FIX 3: Parenthesized string continuation keeps this line short and sweet
-                    bullet_lines.append(
-                        f"  * Modified os_mappings rule matching {mapping.match}"
-                    )
-
-                    if hist_dist != mapping.set_dist:
+                    bullet_lines.append(f"  * Modified os_mappings rule matching {match_key}")
+                    if hist_dist != mapping.distro:
+                        bullet_lines.append(f"  * os_mappings.{match_key}.distro={mapping.distro}")
+                    if hist_codename != mapping.codename:
                         bullet_lines.append(
-                            f"  * os_mappings.{index}.set_dist={mapping.set_dist}"
-                        )
-                    if hist_codename != mapping.set_codename:
-                        bullet_lines.append(
-                            f"  * os_mappings.{index}.set_codename={mapping.set_codename}"
+                            f"  * os_mappings.{match_key}.codename={mapping.codename}"
                         )
 
         for old_match in sorted(historical_matches):
             if old_match not in current_matches:
-                # Record when a single operating system mapping rule flavor vanishes
                 self._logger.debug(f"Change detected: OS mapping rule flavor '{old_match}' pruned.")
-                bullet_lines.append(f"  * Removed os_mappings rule matching {old_match}.")
+                bullet_lines.append(f"  * Removed os_mappings.{old_match}.")
 
         return bullet_lines
+
+    def to_package_config(self) -> PackageConfig:
+        """Reverse-engineers historical changelog records back into a PackageConfig."""
+        self._logger.info(
+            "Reverse-engineering changelog text blocks back to a PackageConfig model..."
+        )
+        history_map, historical_matches = self._reconstruct_historical_state()
+
+        package_name = self.entries[-1].package_name if self.entries else ""
+        version = self.entries[0].version if self.entries else "1.0.0"
+        description = history_map.get("description", "")
+        copyright_year = int(history_map.get("copyright_year", 0))
+        dynamic_keyring = history_map.get("dynamic_keyring") == "true"
+
+
+
+        repo_config = PackageRepoConfig(
+            url=history_map.get("repo.url", ""),
+            suites=history_map.get("repo.suites", ""),
+            components=history_map.get("repo.components", ""),
+            key_url=history_map.get("repo.key_url", ""),
+        )
+
+        os_mappings: dict[str, PackageOSMappingConfig] = {}
+        for match_key in sorted(historical_matches):
+            os_mappings[match_key] = PackageOSMappingConfig(
+                distro=history_map.get(f"os_mappings.{match_key}.distro", ""),
+                codename=history_map.get(f"os_mappings.{match_key}.codename", ""),
+            )
+
+        self._logger.info(f"Successfully reverse-engineered model snapshot for version: {version}")
+        return PackageConfig(
+            name=package_name,
+            version=version,
+            description=description,
+            copyright_year=copyright_year,
+            dynamic_keyring=dynamic_keyring,
+            repo=repo_config,
+            os_mappings=os_mappings,
+        )
 
 
     def generate_next_version(
@@ -345,75 +347,3 @@ class Changelog:
         # Record a successful single-entry compilation pass
         self._logger.debug("Successfully generated isolated baseline release text entry block.")
         return f"{new_block}\n"
-
-
-    def to_package_config(self) -> PackageConfig:
-        """Recreate the package manifest by working backwards.
-
-        Reverse-engineers the historical ledger entries chronologically back into
-        a type-safe, frozen PackageConfig state.
-
-        Returns:
-            A fully constructed PackageConfig reflecting the snapshot properties
-            of this changelog configuration timeline.
-        """
-        # Record inception of the reversal mapping pipeline
-        self._logger.info(
-            "Reverse-engineering changelog text blocks back to a PackageConfig model..."
-        )
-
-        # Harvest our complete historical state tracking maps compiled chronologically
-        history_map, historical_matches = self._reconstruct_historical_state()
-
-        # Extract standard package parameters
-        package_name = self.entries[-1].package_name if self.entries else ""
-        version = self.entries[0].version if self.entries else "1.0.0"
-        description = history_map.get("description", "")
-        copyright_year = int(history_map.get("copyright_year", 0))
-        dynamic_keyring = history_map.get("dynamic_keyring") == "true"
-
-        repo_config = PackageRepoConfig(
-            url=history_map.get("repo.url", ""),
-            suites=history_map.get("repo.suites", ""),
-            components=history_map.get("repo.components", ""),
-            key_url=history_map.get("repo.key_url", ""),
-        )
-
-        # Dynamically rebuild the array list structures from our compiled mappings
-        os_mappings: list[PackageOSMappingConfig] = []
-
-        # Scan history_map keys to find every registered structural sub-index mapping item
-        index_pattern = re.compile(r"^os_mappings\.(\d+)\.match$")
-        discovered_indices = set()
-
-        for key in history_map:
-            match_index = index_pattern.match(key)
-            if match_index:
-                discovered_indices.add(int(match_index.group(1)))
-
-        # Loop through sorted index numbers to reconstruct individual structural dictionary rows
-        for index in sorted(discovered_indices):
-            match_val = history_map.get(f"os_mappings.{index}.match", "")
-
-            # Ensure we only append the rule layer if it hasn't been explicitly pruned from history
-            if match_val in historical_matches:
-                mapping_item = PackageOSMappingConfig(
-                    match=match_val,
-                    set_dist=history_map.get(f"os_mappings.{index}.set_dist", ""),
-                    set_codename=history_map.get(f"os_mappings.{index}.set_codename", ""),
-                )
-                os_mappings.append(mapping_item)
-
-        # Confirm the successful finalization of the frozen data layout
-        self._logger.info(f"Successfully reverse-engineered model snapshot for version: {version}")
-
-        # Compile all sub-components natively straight into your type-safe model container
-        return PackageConfig(
-            name=package_name,
-            version=version,
-            description=description,
-            copyright_year=copyright_year,
-            dynamic_keyring=dynamic_keyring,
-            repo=repo_config,
-            os_mappings=os_mappings,
-        )

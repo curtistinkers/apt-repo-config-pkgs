@@ -57,12 +57,12 @@ repo:
   components: main
   key_url: https://example.com/signing.gpg
 os_mappings:
-  - match: pop|linuxmint
-    set_dist: ubuntu
-    set_codename: ${UBUNTU_CODENAME}
-  - match: raspbian
-    set_dist: debian
-    set_codename: ${VERSION_CODENAME}
+  pop|linuxmint:
+    distro: ubuntu
+    codename: ${UBUNTU_CODENAME}
+  raspbian:
+    distro: debian
+    codename: ${VERSION_CODENAME}
 """
 
 
@@ -83,12 +83,10 @@ def changelog_v1() -> str:
   * repo.suites=${TARGET_CODENAME}
   * repo.components=main
   * repo.key_url=https://example.com/signing.gpg
-  * os_mappings.0.match=pop|linuxmint
-  * os_mappings.0.set_dist=ubuntu
-  * os_mappings.0.set_codename=${UBUNTU_CODENAME}
-  * os_mappings.1.match=raspbian
-  * os_mappings.1.set_dist=debian
-  * os_mappings.1.set_codename=${VERSION_CODENAME}
+  * os_mappings.pop|linuxmint.distro=ubuntu
+  * os_mappings.pop|linuxmint.codename=${UBUNTU_CODENAME}
+  * os_mappings.raspbian.distro=debian
+  * os_mappings.raspbian.codename=${VERSION_CODENAME}
 
  -- Alice <alice@example.com>  Mon, 10 Aug 2026 12:00:00 +0000
 """
@@ -116,12 +114,12 @@ repo:
   components: main
   key_url: https://v2.example.com/signing.gpg
 os_mappings:
-  - match: pop|linuxmint
-    set_dist: ubuntu
-    set_codename: ${UBUNTU_CODENAME}
-  - match: raspbian
-    set_dist: debian
-    set_codename: ${VERSION_CODENAME}
+  pop|linuxmint:
+    distro: ubuntu
+    codename: ${UBUNTU_CODENAME}
+  raspbian:
+    distro: debian
+    codename: ${VERSION_CODENAME}
 """
 
 
@@ -172,9 +170,9 @@ repo:
   components: main
   key_url: https://v2.example.com/signing.gpg
 os_mappings:
-  - match: pop|linuxmint
-    set_dist: ubuntu
-    set_codename: ${UBUNTU_CODENAME}
+  pop|linuxmint:
+    distro: ubuntu
+    codename: ${UBUNTU_CODENAME}
 """
 
 
@@ -196,7 +194,7 @@ def changelog_v3(changelog_v2: str) -> str:
 
   * Updated version to 1.0.2
   * Toggled repository keyring strategy to: dynamic
-  * Removed os_mappings rule matching raspbian.
+  * Removed os_mappings.raspbian.
 
  -- Alice <alice@example.com>  Mon, 10 Aug 2026 14:00:00 +0000
 
@@ -218,8 +216,8 @@ version: 1.0.0
 repo:
   url: https://invalid.example.com
 os_mappings:
-  - match: pop
-    set_dist: ubuntu
+  pop:
+    distro: ubuntu
 """
 
 
@@ -307,10 +305,10 @@ repo:
   components: {{ repo_components }}
   key_url: {{ repo_key_url }}
 os_mappings:
-{%- for mapping in os_mappings %}
-  - match: {{ mapping.match }}
-    set_dist: {{ mapping.set_dist }}
-    set_codename: {{ mapping.set_codename }}
+{%- for match_key, mapping in os_mappings.items() %}
+  {{ match_key }}:
+    distro: {{ mapping.distro }}
+    codename: {{ mapping.codename }}
 {%- endfor %}
 
 """
