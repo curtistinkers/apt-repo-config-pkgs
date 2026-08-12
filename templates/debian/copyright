@@ -1,5 +1,5 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Source: {{ repository_url }}/sources/{{ package_name }}
+Source: {{ repository_url }}/dpkg-sources/{{ package_name }}
 Upstream-Name: {{ package_name }}-repo-config
 Upstream-Contact: {{ maintainer_name }} <{{ maintainer_email }}>
 

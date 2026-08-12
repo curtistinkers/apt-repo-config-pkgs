@@ -7,7 +7,7 @@ Standards-Version: 4.6.2
 
 Package: {{ package_name }}-repo-config
 Architecture: all
-Depends: ${misc:Depends}, curl, ca-certificates, gnupg
+Depends: ${misc:Depends}, wget, gnupg
 Description: {{ short_description }}
  This package automatically manages the APT repository configuration and
  secure cryptographic keyrings for {{ package_name }}.
