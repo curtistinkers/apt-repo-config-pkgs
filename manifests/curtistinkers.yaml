@@ -1,6 +1,6 @@
 name: curtistinkers
-description: Configures my private repository
-version: 1.0.1
+description: My private repository.
+version: 1.0.0
 copyright_year: 2026
 dynamic_keyring: false
 
