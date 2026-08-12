@@ -112,16 +112,36 @@ fetch_dynamic_keyring() {
     KEYRING_PATH="/usr/share/keyrings/{{ package_name }}-archive-keyring.gpg"
     RAW_KEY_URL="{{ repo_key_url }}"
 
+    # Establish a safe, temporary sandbox file path for the initial download
+    TEMP_STAGING_KEY=$(mktemp)
+
     eval EVAL_KEY_URL="\"${RAW_KEY_URL}\""
 
-    log_debug "Dynamic keyring tracking active. Orchestrating client network download..."
     mkdir -p /usr/share/keyrings
 
-    if curl -fsSL "${EVAL_KEY_URL}" | gpg --dearmor > "${KEYRING_PATH}"; then
-        chmod 644 "${KEYRING_PATH}"
-        log_debug "Successfully retrieved and converted dynamic keyring asset."
+    # 1. Download the raw file stream into our temporary staging path container
+    if wget -qO "${TEMP_STAGING_KEY}" "${EVAL_KEY_URL}"; then
+        # 2. Inspect the file header line natively to detect ASCII text armor
+        if grep -q "BEGIN PGP PUBLIC KEY BLOCK" "${TEMP_STAGING_KEY}"; then
+            # Format is ASCII-Armored text: Convert to binary format before saving
+            if gpg --dearmor < "${TEMP_STAGING_KEY}" > "${KEYRING_PATH}"; then
+                chmod 644 "${KEYRING_PATH}"
+            else
+                echo "ERROR: Failed to dearmor ASCII cryptographic key asset." >&2
+                rm -f "${TEMP_STAGING_KEY}"
+                exit 1
+            fi
+        else
+            # Format is already raw binary OpenPGP: Move directly to destination folder
+            mv "${TEMP_STAGING_KEY}" "${KEYRING_PATH}"
+            chmod 644 "${KEYRING_PATH}"
+        fi
+
+        # Clean up our temporary staging workspace file cleanly
+        rm -f "${TEMP_STAGING_KEY}"
     else
-        echo "ERROR: Failed to download or process cryptographic keyring from ${EVAL_KEY_URL}" >&2
+        echo "ERROR: Failed to download keyring from ${EVAL_KEY_URL}" >&2
+        rm -f "${TEMP_STAGING_KEY}"
         exit 1
     fi
 }
