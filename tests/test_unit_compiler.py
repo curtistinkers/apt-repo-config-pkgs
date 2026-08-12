@@ -9,64 +9,95 @@ from pathlib import Path
 
 import yaml
 
-from package_generator import Logger, ProjectManifest, RepositoryManifest
+from package_generator import (
+    DebianTemplateCompiler,
+    Logger,
+    ProjectManifest,
+    RepositoryManifest,
+)
 
 
-def test_compiler_successfully_renders_template_variables(
+def test_compiler_successfully_recreates_exact_project_configuration_file(
+    tmp_path: Path,
     manifest_v1: str,
-    project_config: str
+    project_config: str,
+    mock_project_config_template: str,
 ) -> None:
-    """Verifies Jinja2 data template rendering boundaries.
-
-    Ensures that the compiler accepts strongly typed configuration inputs
-    and compiles their properties cleanly into a text template string.
+    """Verifies Jinja2 compilation by recreating the exact project input file.
 
     Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
         manifest_v1: A test fixture providing a valid raw manifest YAML string.
         project_config: A test fixture providing raw project YAML text.
+        mock_project_config_template: Blueprint layout matching project_config.
     """
-    # Instantiate a a silent logger
     silent_logger = Logger(min_terminal_level="emergency")
 
-    # Pass the fixture through the manifest block to compile the type-safe DVO
-    raw_input_data = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_input_data, logger=silent_logger)
-
-    # FIX: Parse your new project YAML fixture cleanly into our type-safe DVO block
+    # 1. Translate primitive text inputs into true object DVO values
     raw_project_data = yaml.safe_load(project_config)
     project_manifest = ProjectManifest(raw_data=raw_project_data, logger=silent_logger)
 
-    # Define the path where template files live at the repository root
-    # Path(__file__).parents[2] navigates up from tests/ to the root folder
-    templates_dir = Path(__file__).parents[1] / "templates" / "debian"
+    raw_manifest_data = yaml.safe_load(manifest_v1)
+    manifest = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger)
 
-    # Lazy-load compiler class to test the path contract
-    from package_generator.compiler import DebianTemplateCompiler
+    # 2. Write the template to a temporary sandbox directory layout path
+    sandbox_dir = tmp_path / "templates"
+    sandbox_dir.mkdir()
 
-    # Pass the templates folder location straight to the compiler constructor
-    compiler = DebianTemplateCompiler(templates_dir=templates_dir, logger=silent_logger)
+    template_file = sandbox_dir / "project_config_mock"
+    template_file.write_text(mock_project_config_template, encoding="utf-8")
 
-    # Instruct the compiler to load and render the 'control' template file
+    # 3. Compile the values back out into a text stream using the real DVOs
+    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
+
     rendered_output = compiler.render_template(
-        template_name="control",
+        template_name="project_config_mock",
         package_config=manifest.config,
-        project_config=project_manifest.config
+        project_config=project_manifest.config,
     )
 
-    # ASSERTIONS: Verify that Jinja2 successfully compiled the text fields
-    expected_text = (
-        "Source: test-repo-repo-config\n"
-        "Section: utils\n"
-        "Priority: optional\n"
-        "Maintainer: Alice <alice@example.com>\n"
-        "Build-Depends: debhelper-compat (= 13)\n"
-        "Standards-Version: 4.6.2\n"
-        "\n"
-        "Package: test-repo-repo-config\n"
-        "Architecture: all\n"
-        "Depends: ${misc:Depends}, curl, ca-certificates, gnupg\n"
-        "Description: Test repository package layout configuration.\n"
-        " This package automatically manages the APT repository configuration and\n"
-        " secure cryptographic keyrings for test-repo."
+    # 4. SYMMETRICAL LOOP ASSERTION: Recreated text must match origin text exactly
+    assert rendered_output == project_config
+
+
+def test_compiler_successfully_recreates_exact_repository_manifest_file(
+    tmp_path: Path,
+    manifest_v1: str,
+    project_config: str,
+    mock_manifest_template: str,
+) -> None:
+    """Verifies Jinja2 compilation by recreating the exact manifest input file.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+        project_config: A test fixture providing raw project YAML text.
+        mock_manifest_template: Blueprint layout matching manifest_v1.
+    """
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    # 1. Translate primitive text inputs into true object DVO values
+    raw_manifest_data = yaml.safe_load(manifest_v1)
+    manifest = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger)
+
+    raw_project_data = yaml.safe_load(project_config)
+    project_manifest = ProjectManifest(raw_data=raw_project_data, logger=silent_logger)
+
+    # 2. Write the template to a temporary sandbox directory layout path
+    sandbox_dir = tmp_path / "templates"
+    sandbox_dir.mkdir()
+
+    template_file = sandbox_dir / "manifest_mock"
+    template_file.write_text(mock_manifest_template, encoding="utf-8")
+
+    # 3. Compile the values back out into a text stream using the real DVOs
+    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
+
+    rendered_output = compiler.render_template(
+        template_name="manifest_mock",
+        package_config=manifest.config,
+        project_config=project_manifest.config,
     )
-    assert rendered_output == expected_text
+
+    # 4. SYMMETRICAL LOOP ASSERTION: Recreated text must match origin text exactly
+    assert rendered_output == manifest_v1
