@@ -1,5 +1,5 @@
 name: docker
-description: Configures the official Docker CE repository
+description: Configures the official Docker CE repository.
 version: 1.0.0
 copyright_year: 2026
 dynamic_keyring: true
