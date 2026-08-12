@@ -14,3 +14,6 @@ os_mappings:
   - match: "pop|linuxmint|elementary"
     set_dist: "ubuntu"
     set_codename: "${UBUNTU_CODENAME}"
+  - match: "raspbian"
+    set_dist: "debian"
+    set_codename: "${VERSION_CODENAME}"
