@@ -8,6 +8,7 @@ template file resource loading compilation tracks, and workspace purges.
 import shutil
 from pathlib import Path
 
+from .changelog import Changelog
 from .compiler import DebianTemplateCompiler
 from .logger import Logger
 from .models import PackageConfig, ProjectConfig
@@ -38,12 +39,15 @@ class DebianPackageBuilder:
         self,
         config: PackageConfig,
         project_config: ProjectConfig,
+        current_time: str | None = None,
     ) -> Path:
         """Creates a clean source tree and compiles all available Debian layout files.
 
         Args:
             config: Validated, strongly typed package configuration parameters.
             project_config: Validated, strongly typed global project parameters.
+            current_time: An optional RFC-2822 string override used strictly to lock
+                down deterministic test outcomes. Defaults to None (uses system time).
 
         Returns:
             The resolved physical Path object targeting the package's internal
@@ -51,39 +55,59 @@ class DebianPackageBuilder:
         """
         self._logger.debug(f"Initializing directory layout compilation for package: {config.name}")
 
-        # Construct standard layout target path: sources/<package_name>/debian
         package_root_dir = self._sources_dir / config.name
         target_debian_dir = package_root_dir / "debian"
+
+        # Check for pre-existing history tracking files BEFORE wiping or creating directories
+        changelog_file_path = target_debian_dir / "changelog"
+        existing_history_text = ""
+
+        if changelog_file_path.exists():
+            self._logger.info(f"Discovered pre-existing changelog file at: {changelog_file_path}")
+            existing_history_text = changelog_file_path.read_text(encoding="utf-8")
 
         # Physically create the directory structures safely on the platter
         target_debian_dir.mkdir(parents=True, exist_ok=True)
 
-        self._logger.debug("Dynamically discovering available system template assets...")
+        # 1. ORCHESTRATE CHANGELOG LIFECYCLE TRACKING PERSISTENCE
+        # Feed existing history or blank slate into the dynamic diff assembler engine
+        changelog_handler = Changelog(raw_text=existing_history_text, logger=self._logger)
 
-        # FIX: Query the compiler's Jinja2 environment to find all files in the templates folder
+        updated_changelog_content = changelog_handler.generate_next_version(
+            config=config,
+            project_config=project_config,
+            current_time=current_time,
+        )
+
+        # Write out the persistent, incremented changelog ledger with strict Unix newlines
+        with open(changelog_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
+            file_stream.write(updated_changelog_content)
+
+        # 2. RENDER THE REST OF THE DEBIAN TEMPLATE PLATES POOL
+        self._logger.debug("Dynamically discovering available system template assets...")
         available_templates = self._compiler._env.list_templates()
 
         for template_name in available_templates:
+            # Skip manual control processing if the template named 'changelog' is found in templates,
+            # since our object-oriented layer now manages changelog composition explicitly
+            if template_name == "changelog":
+                continue
+
             self._logger.debug(f"Processing and compiling workspace template line: {template_name}")
 
-            # Execute the template variable injection pass
             compiled_text_stream = self._compiler.render_template(
                 template_name=template_name,
                 package_config=config,
                 project_config=project_config,
             )
 
-            # Define the exact destination file target location on disk
             output_file_path = target_debian_dir / template_name
-
-            # Safely create parent sub-folders if a multi-nested layout exists
             output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Physically write out the plain text stream onto your hard drive
-            with open(output_file_path, "w", encoding="utf-8", newline="\n") as file_writer:
-                file_writer.write(compiled_text_stream)
+            with open(output_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
+                file_stream.write(compiled_text_stream)
 
-        self._logger.info(f"Successfully orchestrated debian/ container at: {target_debian_dir}")
+        self._logger.info(f"Successfully finalized debian/ container at: {target_debian_dir}")
         return target_debian_dir
 
     def remove_package_tree(self) -> None:

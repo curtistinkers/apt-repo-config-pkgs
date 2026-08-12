@@ -118,3 +118,65 @@ def test_builder_successfully_removes_sources_directory_tree(tmp_path: Path) -> 
 
     # 3. ASSERTION: The entire directory tree must be completely purged from disk
     assert not sources_dir.exists(), "The builder failed to delete the target directory tree."
+
+def test_builder_persists_and_increments_existing_changelog_on_disk(
+    tmp_path: Path,
+    manifest_v2: str,
+    project_config: str,
+    changelog_v1: str,
+    changelog_v2: str,
+) -> None:
+    """Verifies that the builder reads an existing changelog to calculate deltas.
+
+    Ensures that if a changelog file already exists in the target debian/ folder,
+    the builder reverse-engineers its historical state, appends the new version
+    delta entries, and overwrites the file non-destructively.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        manifest_v2: A test fixture providing a bumped v2 manifest string.
+        project_config: A test fixture providing a valid raw project YAML string.
+        changelog_v1: The pre-existing historical changelog on the platter.
+        changelog_v2: The expected cumulative final changelog output text stream.
+    """
+    # 1. SETUP: Prepare our sandbox, models, and pre-existing file on disk
+    silent_logger = Logger(min_terminal_level="emergency")
+
+    raw_manifest = yaml.safe_load(manifest_v2)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+
+    raw_project = yaml.safe_load(project_config)
+    project_manifest = ProjectManifest(raw_data=raw_project, logger=silent_logger)
+
+    templates_dir = tmp_path / "templates" / "debian"
+    templates_dir.mkdir(parents=True)
+    # Write empty template placeholders so the builder can complete its execution loop
+    (templates_dir / "control").write_text("", encoding="utf-8")
+    (templates_dir / "rules").write_text("", encoding="utf-8")
+
+    compiler = DebianTemplateCompiler(templates_dir=templates_dir, logger=silent_logger)
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Pre-seed the target debian/ tree with a real historical changelog file
+    target_debian_dir = sources_dir / "test-repo" / "debian"
+    target_debian_dir.mkdir(parents=True)
+    existing_changelog_file = target_debian_dir / "changelog"
+    existing_changelog_file.write_text(changelog_v1, encoding="utf-8")
+
+    builder = DebianPackageBuilder(
+        sources_dir=sources_dir,
+        logger=silent_logger,
+        compiler=compiler,
+    )
+
+    # 2. EXECUTION: Run the package directory tree compilation pass
+    # We pass a fixed test timestamp override matching our changelog fixture requirements
+    builder.create_package_tree(
+        config=manifest.config,
+        project_config=project_manifest.config,
+        current_time="Mon, 10 Aug 2026 13:00:00 +0000",
+    )
+
+    # 3. ASSERTIONS: Verify the file on disk was incremented to v2 perfectly
+    assert existing_changelog_file.exists()
+    assert existing_changelog_file.read_text(encoding="utf-8").strip() == changelog_v2.strip()
