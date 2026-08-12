@@ -1,0 +1,12 @@
+openmediavault (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=Configures the official OpenMediaVault repository.
+  * copyright_year=2026
+  * dynamic_keyring=false
+  * repo.url=http://packages.openmediavault.org
+  * repo.suites=synchrony
+  * repo.components=main
+  * repo.key_url=https://packages.openmediavault.io/archive.key
+
+ -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 07:24:38 -0500
