@@ -26,12 +26,14 @@ def test_project_config_stores_attributes_correctly() -> None:
         maintainer_name="Alice",
         maintainer_email="alice@example.com",
         copyright_holder="Alice",
-        repository_url="https://example.com/alice/deb-repo-config-packages"
+        repository_url="https://example.com/alice/deb-repo-config-packages",
+        package_suffix="-repo-config",
     )
     assert config.maintainer_name == "Alice"
     assert config.maintainer_email == "alice@example.com"
     assert config.copyright_holder == "Alice"
     assert config.repository_url == "https://example.com/alice/deb-repo-config-packages"
+    assert config.package_suffix == "-repo-config"
 
 
 def test_project_config_is_strictly_immutable() -> None:
@@ -40,13 +42,15 @@ def test_project_config_is_strictly_immutable() -> None:
         maintainer_name="Alice",
         maintainer_email="alice@example.com",
         copyright_holder="Alice",
-        repository_url="https://example.com/alice/deb-repo-config-packages"
+        repository_url="https://example.com/alice/deb-repo-config-packages",
+        package_suffix="-repo-config",
     )
     with pytest.raises(FrozenInstanceError):
         config.maintainer_name = "Bob"  # type: ignore
         config.maintainer_email = "bob@example.com"  # type: ignore
         config.maintainer_name = "Bob"  # type: ignore
         config.repository_url = "https://example.com/bob/deb-repo-config-packages"  # type: ignore
+        config.package_suffix = "-different-suffix"  # type: ignore
 
 
 # ==============================================================================

@@ -11,6 +11,7 @@ class ProjectConfig:
     maintainer_email: str
     copyright_holder: str
     repository_url: str
+    package_suffix: str
 
 
 @dataclass(frozen=True)
