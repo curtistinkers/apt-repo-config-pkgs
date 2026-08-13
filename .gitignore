@@ -7,6 +7,7 @@
 htmlcov/
 
 # Helper files for debuild
+dpkg-sources/*
 dpkg-sources/*/debian/**debhelper*
 dpkg-sources/*/debian/*-repo-config*
 dpkg-sources/*/debian/files
