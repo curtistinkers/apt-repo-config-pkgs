@@ -2,5 +2,3 @@ pyyaml>=6.0
 jinja2>=3.1
 requests>=2.31
 click>=8.4.2
-pytest>=9.1.1
-pytest_cov>=7.1.0
