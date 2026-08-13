@@ -662,7 +662,7 @@ def test_changelog_engine_fails_when_no_changelog_template(
     config_v1: PackageConfig,
     changelog_v1: str,
 ) -> None:
-    """Verifies that the generator raises a FileNotFoundError if the changelog template file is missing.
+    """Verifies the generator raises a FileNotFoundError if the changelog template file is missing.
 
     Args:
         changelog_sandbox: Shared setup fixture providing the template directory and project object.
