@@ -639,11 +639,11 @@ def test_changelog_incremental_deltas_returns_empty_when_no_latest_entry(
     changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     config_v1: PackageConfig,
 ) -> None:
-    """TODO: Add description.
+    """Verifies that the delta engine returns an empty list if no historical ledger entries exist.
 
     Args:
-        changelog_sandbox: TODO
-        config_v1: TODO
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
+        config_v1: A test fixture providing a baseline static keyring package configuration.
     """
     # Extract the shared infrastructure assets from fixtures
     logger, _, _ = changelog_sandbox
@@ -662,7 +662,7 @@ def test_changelog_engine_fails_when_no_changelog_template(
     config_v1: PackageConfig,
     changelog_v1: str,
 ) -> None:
-    """TODO: Add description.
+    """Verifies that the generator raises a FileNotFoundError if the changelog template file is missing.
 
     Args:
         changelog_sandbox: Shared setup fixture providing the template directory and project object.

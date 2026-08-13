@@ -385,7 +385,7 @@ def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
         tmp_path: A built-in pytest fixture providing a temporary directory path.
         project_config: A test fixture providing raw project YAML text.
         manifest_v1: A test fixture providing a valid raw manifest YAML string.
-        mock_manifest_template: TODO
+        mock_manifest_template: Blueprint layout matching manifest_v1 format.
     """
     runner = CliRunner()
 

@@ -28,9 +28,9 @@ def mock_builder_ctx(
 ) -> tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path]:
     """Provides a fully mocked builder instance with pre-configured services.
 
-    Arg
-        tmp_path: TODO
-        mock_changelog_template: TODO
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        mock_changelog_template: A test fixture providing a mock changelog template layout.
     """
     logger = Logger(min_terminal_level="emergency")
 
@@ -81,8 +81,8 @@ def test_builder_build_clean_package_directory_tree(
 
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
-        config_v1: TODO
-        project_config_object: TODO
+        config_v1: A test fixture providing a baseline static keyring package configuration.
+        project_config_object: A project configuration text fixture containing global project info.
     """
     # Extract pre-configured builder and dependencies from our shared setup fixture
     _, builder, _, _, sources_dir = mock_builder_ctx
@@ -162,10 +162,11 @@ def test_builder_persists_and_increments_existing_changelog(
 
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
-        config_v2: TODO
-        project_config_object: TODO
-        changelog_v1: The pre-existing historical changelog on the platter.
-        changelog_v2: The expected cumulative final changelog output text stream.
+        config_v2: A package configuration test fixture updated to version 1.0.1 with field changes.
+        project_config_object: A project configuration text fixture containing global project info.
+        changelog_v1: The pre-existing historical changelog.
+        changelog_v2: The expected cumulative changelog output.
+
     """
     # Extract pre-configured builder and workspace from our shared setup fixture
     _, builder, _, _, sources_dir = mock_builder_ctx
@@ -200,8 +201,8 @@ def test_builder_throws_emergency_error_if_changelog_template_exists(
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
         tmp_path: A built-in pytest fixture providing a temporary directory path.
-        config_v1: TODO
-        project_config_object: TODO
+        config_v1: A test fixture providing a baseline static keyring package configuration.
+        project_config_object: A project configuration text fixture containing global project info.
     """
     _, builder, _, _, _ = mock_builder_ctx
 
@@ -236,8 +237,8 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
 
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
-        config_v1: TODO
-        project_config_object: TODO
+        config_v1: A test fixture providing a baseline static keyring package configuration.
+        project_config_object: A project configuration text fixture containing global project info.
     """
     # Extract pre-configured components directly from our shared setup fixture
     logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
@@ -287,8 +288,8 @@ def test_builder_invokes_dearmor_when_key_payload_starts_with_ascii_headers(
 
     Arg
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
-        config_v1: TODO
-        project_config_object: TODO
+        config_v1: A test fixture providing a baseline static keyring package configuration.
+        project_config_object: A project configuration text fixture containing global project info.
     """
     logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
 
@@ -325,8 +326,8 @@ def test_builder_bypasses_dearmor_when_key_payload_is_already_raw_binary(
 
     Arg
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
-        config_v1: TODO
-        project_config_object: TODO
+        config_v1: A test fixture providing a baseline static keyring package configuration.
+        project_config_object: A project configuration text fixture containing global project info.
     """
     logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
 
