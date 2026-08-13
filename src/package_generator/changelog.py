@@ -137,18 +137,18 @@ class Changelog:
         history_map: dict[str, str] = {}
 
         # Extract original sequence layout using a clean forward-pass scanner
-        ordered_historical_flavors = self._extract_original_layout_order()
+        ordered_flavors = self._extract_original_layout_order()
 
         # Compile state overrides by reading entries in reverse chronological order
         for entry in reversed(self.entries):
             self._logger.debug(f"Collating change bullets from version block: {entry.version}")
 
             for row in entry.changes.splitlines():
-                self._parse_historical_state_row(row, history_map, ordered_historical_flavors)
+                self._parse_historical_state_row(row, history_map)
 
-            self._parse_human_readable_log_mutations(entry, history_map, ordered_historical_flavors)
+            self._parse_human_readable_log_mutations(entry, history_map, ordered_flavors)
 
-        return history_map, ordered_historical_flavors
+        return history_map, ordered_flavors
 
     def _extract_original_layout_order(self) -> list[str]:
         """Scans entries chronologically to lock in original insertion layout order."""
@@ -169,7 +169,7 @@ class Changelog:
         return ordered_flavors
 
     def _parse_historical_state_row(
-        self, row: str, history_map: dict[str, str], ordered_flavors: list[str]
+        self, row: str, history_map: dict[str, str]
     ) -> None:
         """Parses a single row from a change log block into primitive state properties."""
         clean_row = row.strip().lstrip("*").strip()
@@ -260,7 +260,7 @@ class Changelog:
             A list of structural alteration descriptions and scalar modifications.
         """
         if not self.latest_entry:
-            self._logger.error("Incremental delta check aborted: No valid historical ledger entries discovered.")
+            self._logger.error("Incremental delta check aborted: No changelog entries found.")
             return []
 
         # Initialize as a pure empty list slate. Do not pre-seed the version line yet!
@@ -304,7 +304,10 @@ class Changelog:
             self._logger.debug("Change detected: Package 'repo.suites' field updated.")
             bullet_lines.append(f"  * Modified repo.suites: {config.repo.suites}")
 
-        if "repo.components" in history_map and history_map["repo.components"] != config.repo.components:
+        if (
+            "repo.components" in history_map
+            and history_map["repo.components"] != config.repo.components
+        ):
             self._logger.debug("Change detected: Package 'repo.components' field updated.")
             bullet_lines.append(f"  * Modified repo.components: {config.repo.components}")
 
@@ -365,11 +368,11 @@ class Changelog:
 
 
     def to_package_config(self) -> PackageConfig:
-        """Reverse-engineers the current parsed historical state back into a PackageConfig DVO."""
+        """Reverse-engineers the current parsed changelog into a PackageConfig object."""
         self._logger.debug("Reconstructing config structures from parsed historical metrics...")
 
-        # Unpack ordered_historical_flavors as a sequence list instead of historical_matches set
-        history_map, ordered_historical_flavors = self._reconstruct_historical_state()
+        # Unpack ordered_flavors as a sequence list instead of historical_matches set
+        history_map, ordered_flavors = self._reconstruct_historical_state()
 
         raw_extracted_name = (
             self.latest_entry.package_name if self.latest_entry else "unknown-package"
@@ -395,7 +398,7 @@ class Changelog:
         # FIX 3: Iterate straight through the chronological list layout. No sorting!
         # This completely preserves the user's exact original dictionary entry placement order.
         os_mappings = {}
-        for flavor in ordered_historical_flavors:
+        for flavor in ordered_flavors:
             os_mappings[flavor] = PackageOSMappingConfig(
                 distro=history_map.get(f"os_mappings.{flavor}.distro", ""),
                 codename=history_map.get(f"os_mappings.{flavor}.codename", ""),
@@ -440,13 +443,17 @@ class Changelog:
         self._logger.debug(f"Calculating configuration delta checks for package: {config.name}")
 
         target_template = templates_dir / "changelog.jinja2"
-        if not target_template.exists():
-            err_msg = (
-                f"Fatal architecture breach: Required layout file "
-                f"'changelog.jinja2' is missing from: {templates_dir}"
+
+        try:
+            if not target_template.exists():
+                err_msg = (
+                    f"Fatal architecture breach: Required layout file "
+                    f"'changelog.jinja2' is missing from: {templates_dir}"
                 )
-            self._logger.emergency(err_msg)
-            raise FileNotFoundError(err_msg)
+                raise FileNotFoundError(err_msg)
+        except FileNotFoundError as missing_file_error:
+            self._logger.emergency(str(missing_file_error))
+            raise missing_file_error
 
         resolved_time = current_time if current_time is not None else formatdate(localtime=True)
         # Inside generate_next_version, right after calculating bullets:
@@ -455,7 +462,7 @@ class Changelog:
 
         # Short-circuit optimization: If no fields changed, preserve exact idempotency
         if not bullet_lines:
-            self._logger.info("Idempotent state verified: No structural parameters or configurations changed.")
+            self._logger.info("Idempotent state verified: No parameters or configurations changed.")
             return self._raw_text
 
         # Validate version bumps. If the manifest has structural modifications
@@ -471,13 +478,17 @@ class Changelog:
 
         # Turn the soft check into a mandatory, non-negotiable architectural gate rail
         target_template = templates_dir / "changelog.jinja2"
-        if not target_template.exists():
-            err_msg = (
-                f"Fatal architecture breach: Required layout file 'changelog.jinja2' "
-                f"is missing from specified directory track: {templates_dir}"
-            )
-            self._logger.emergency(err_msg)
-            raise FileNotFoundError(err_msg)
+
+        # try:
+        # if not target_template.exists():
+        #     err_msg = (
+        #         f"Fatal architecture breach: Required layout file 'changelog.jinja2' "
+        #         f"is missing from specified directory track: {templates_dir}"
+        #     )
+                # raise FileNotFoundError(err_msg)
+        # except FileNotFoundError as missing_file_error:
+            # self._logger.emergency(str(missing_file_error))
+            # raise missing_file_error
 
         # Once validated, proceed directly with compile and render operations
         self._logger.info("Initializing external changelog layout compilation pass...")
