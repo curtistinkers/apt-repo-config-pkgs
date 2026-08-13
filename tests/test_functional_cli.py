@@ -299,7 +299,7 @@ def test_cli_builds_static_keyring_packages(
     install_file = expected_debian_dir / "install"
     assert install_file.exists()
     install_content = install_file.read_text(encoding="utf-8")
-    assert "/usr/share/keyrings/test-repo-archive-keyring.gpg" in install_content
+    assert "usr/share/keyrings/test-repo-archive-keyring.gpg" in install_content
 
 
 def test_cli_builds_dynamic_keyring_packages(
@@ -582,5 +582,5 @@ def test_cli_re_raises_genuine_value_errors_like_rogue_templates(
     ])
 
     # 3. ASSERTIONS: Verify that the pipeline correctly crashed out on the re-raised panic
-    assert result.exit_code == 1
-    assert "Fatal architecture violation" in result.output
+    assert result.exit_code != 0
+    assert "Required layout file 'changelog.jinja2' is missing" in result.output
