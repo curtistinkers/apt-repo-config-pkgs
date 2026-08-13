@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # =============================================================================
 # Debian Post-Removal Script (postrm)
 # Guarantees the dynamic repo file is dropped to keep system APT layouts clean.
@@ -17,7 +17,7 @@ DEBUG="true"
 # -----------------------------------------------------------------------------
 log_debug() {
     if [ "${DEBUG}" = "true" ]; then
-        echo "[DEBUG-TRACE] $1"
+        echo "[log2ram-repo-config] $1"
     fi
 }
 
