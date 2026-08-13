@@ -390,7 +390,7 @@ def test_changelog_raises_value_error_on_version_downgrade(
     """Verifies that attempting a backward version downgrade raises a ValueError.
 
     Args:
-        changelog_sandbox: Shared setup fixture providing the template directory and project object..
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         config_v1: A test fixture providing the baseline configuration state.
         changelog_v2: Pre-existing history that is already ahead at version 1.0.1.
     """
@@ -423,7 +423,7 @@ def test_changelog_raises_value_error_when_manifest_modified_without_version_bum
     to a manifest without changing the version string identifier.
 
     Args:
-        changelog_sandbox: Shared setup fixture providing the template directory and project object..
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         manifest_v2: A test fixture providing a baseline v2 (1.0.1) config state.
         changelog_v2: Pre-existing history that is already at version 1.0.1.
     """
@@ -455,7 +455,7 @@ def test_changelog_calculates_modified_os_mapping_property_deltas(
     """Verifies that the engine detects and documents altered fields inside os_mappings.
 
     Args:
-        changelog_sandbox: Shared setup fixture providing the template directory and project object..
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         manifest_v1: A test fixture providing a baseline configuration state.
         changelog_v1: An existing history that has progressed forward to v1.0.0.
     """
@@ -610,7 +610,7 @@ def test_changelog_engine_renders_next_version_using_external_jinja_template(
     provided template layout structure to output the final changelog text.
 
     Args:
-        changelog_sandbox: Shared setup fixture providing the template directory and project object..
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         config_v1: Shared setup fixture providing the initial repository object.
         changelog_v1: The expected initial genesis changelog file text block.
         mock_changelog_template: Blueprint layout matching changelog_v1 format.
@@ -634,3 +634,56 @@ def test_changelog_engine_renders_next_version_using_external_jinja_template(
 
     # Verify the template structure applied the suffix and formatted lines perfectly
     assert compiled_output.strip() == changelog_v1.strip()
+
+def test_changelog_incremental_deltas_returns_empty_when_no_latest_entry(
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
+) -> None:
+    """TODO: Add description.
+
+    Args:
+        changelog_sandbox: TODO
+        config_v1: TODO
+    """
+    # Extract the shared infrastructure assets from fixtures
+    logger, _, _ = changelog_sandbox
+
+    # Initialize a baseline engine with an absolute blank text history string
+    changelog_engine = Changelog(raw_text="", logger=logger)
+
+    # Directly invoke the internal private delta compiler method to cover the guard rail branch
+    result = changelog_engine._calculate_incremental_deltas(config=config_v1)
+    assert result == []
+
+
+def test_changelog_engine_fails_when_no_changelog_template(
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    tmp_path: Path,
+    config_v1: PackageConfig,
+    changelog_v1: str,
+) -> None:
+    """TODO: Add description.
+
+    Args:
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        config_v1: Shared setup fixture providing the initial repository object.
+        changelog_v1: The expected initial genesis changelog file text block.
+    """
+    # Extract the shared infrastructure assets from fixtures
+    logger, _, project = changelog_sandbox
+
+    template_dir = tmp_path
+
+    assert not (template_dir / "changelog.jinja2 ").exists()
+
+    # Initialize our changelog slate tracker pre-seeded with our existing history string fixture
+    changelog = Changelog(raw_text=changelog_v1, logger=logger)
+
+    with pytest.raises(FileNotFoundError):
+        changelog.generate_next_version(
+            config=config_v1,
+            project_config=project,
+            current_time="Mon, 10 Aug 2026 12:00:00 +0000",
+            templates_dir=template_dir,
+        )
