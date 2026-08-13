@@ -5,12 +5,14 @@ Maps incoming terminal arguments, subcommands, and debug flags to core business
 logic orchestration layers.
 """
 
+import dataclasses
 import shutil
 import sys
 from pathlib import Path
 
 import click
 import yaml
+from jinja2 import Environment, FileSystemLoader
 from packaging.version import Version
 
 from .builder import DebianPackageBuilder
@@ -179,11 +181,11 @@ def _orchestrate_manifest_build_loop(
                     except ValueError as validation_error:
                         manifest, compiled_successfully = _handle_version_bump_prompt(
                             item=item,
-                            raw_yaml_data=raw_yaml_data,
                             manifest=manifest,
                             validation_error=validation_error,
                             bump_version=bump_version,
-                            logger=logger
+                            logger=logger,
+                            templates_dir=builder._templates_dir
                         )
 
             except Exception as error:
@@ -195,11 +197,11 @@ def _orchestrate_manifest_build_loop(
 
 def _handle_version_bump_prompt(
     item: Path,
-    raw_yaml_data: dict,
     manifest: RepositoryManifest,
     validation_error: ValueError,
     bump_version: bool,
     logger: Logger,
+    templates_dir: Path,
 ) -> tuple[RepositoryManifest, bool]:
     """Evaluates version bumps via prompts or re-raises generic ValueErrors."""
     if "Manifest modified without version bump" in str(validation_error):
@@ -213,18 +215,45 @@ def _handle_version_bump_prompt(
 
         if bump_version or click.confirm(prompt_msg, default=False):
             logger.info(f"Auto-bumping manifest file {item.name} forward to v{next_version_str}...")
-            raw_yaml_data["version"] = next_version_str
-            with open(item, "w", encoding="utf-8") as yaml_out_stream:
-                yaml.safe_dump(raw_yaml_data, yaml_out_stream, default_flow_style=False)
 
-            reloaded_manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
-            return reloaded_manifest, False
+            # FIX 1: Safely update our immutable frozen dataclass object using replace()
+            updated_config = dataclasses.replace(manifest.config, version=next_version_str)
+
+
+            native_env = Environment(
+                loader=FileSystemLoader(str(templates_dir)),
+                autoescape=False
+            )
+
+            # FIX 2: Map flat keys to perfectly match your mock_manifest_template variables pool
+            manifest_template = native_env.get_template("manifest.jinja2")
+            compiled_manifest_text = manifest_template.render(
+                package_name=updated_config.name,
+                version=updated_config.version,
+                short_description=updated_config.description,
+                copyright_year=updated_config.copyright_year,
+                dynamic_keyring=updated_config.dynamic_keyring,
+                repo_url=updated_config.repo.url if updated_config.repo else "",
+                repo_suites=updated_config.repo.suites if updated_config.repo else "",
+                repo_components=updated_config.repo.components if updated_config.repo else "",
+                repo_key_url=updated_config.repo.key_url if updated_config.repo else "",
+                os_mappings=updated_config.os_mappings,
+            )
+
+            # Flush content to disk platter
+            with open(item, "w", encoding="utf-8", newline="\n") as manifest_out:
+                manifest_out.write(compiled_manifest_text)
+
+            # FIX 3: Update our wrapper reference tracker so the next loop has the correct version
+            manifest.config = updated_config
+            return manifest, False
+
         else:
             logger.alert(f"Skipping package file {item.name} due to state version mismatch.")
             return manifest, True
 
-    # This maps directly to your missing Line 213 coverage target block!
     raise validation_error
+
 
 
 @main_cli.command(name="clean")
