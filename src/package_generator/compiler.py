@@ -38,7 +38,7 @@ class DebianTemplateCompiler:
         template_name: str,
         package_config: PackageConfig,
         project_config: ProjectConfig,
-        **kwargs: Any,  # FIX 1: Add a kwargs collection tray to safely accept custom fields like changelog data
+        **kwargs: Any,
     ) -> str:
         """Loads a target template file from disk and renders its variable tokens.
 
@@ -72,7 +72,14 @@ class DebianTemplateCompiler:
         return compiled_output
 
     def _compile_os_normalization_rules(self, package_config: PackageConfig) -> str:
-        """Assembles raw Bash case statement strings from the package OS mappings data model."""
+        """Assembles raw Bash case statement strings from the package OS mappings data model.
+
+        Args:
+            package_config: Validated, strongly typed package configuration parameters.
+
+        Returns:
+            A combined multi-line string containing the formatted shell script blocks.
+        """
         self._logger.debug("Mapping strongly typed fields into flat template context variables...")
         compiled_rules = []
 
@@ -99,7 +106,17 @@ class DebianTemplateCompiler:
         os_normalization_rules: str,
         extra_context: dict[str, Any],
     ) -> dict[str, Any]:
-        """Assembles the complete, unified template variables map supporting all engine lanes."""
+        """Assembles the complete, unified template variables map supporting all engine lanes.
+
+        Args:
+            package_config: Validated, strongly typed package configuration parameters.
+            project_config: Validated, strongly typed global project parameters.
+            os_normalization_rules: Pre-compiled multiline bash rules normalization script string.
+            extra_context: A dictionary of additional dynamic attributes to inject.
+
+        Returns:
+            A flat combined dictionary mapping variable names straight to primitives.
+        """
         context: dict[str, Any] = {
             "package_name": package_config.name,
             "short_description": package_config.description,
