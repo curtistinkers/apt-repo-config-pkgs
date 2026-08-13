@@ -1,4 +1,5 @@
 openmediavault-trixie-repo-config (1.0.0) stable; urgency=medium
+
   * Initial package definition established.
   * description=Configures the official OpenMediaVault repository for Debian 13.
   * copyright_year=2026
@@ -7,4 +8,5 @@ openmediavault-trixie-repo-config (1.0.0) stable; urgency=medium
   * repo.suites=synchrony
   * repo.components=main
   * repo.key_url=https://packages.openmediavault.io/archive.key
+
  -- curtistinkers <curtistinkers@gmail.com>  Thu, 13 Aug 2026 03:24:35 -0500

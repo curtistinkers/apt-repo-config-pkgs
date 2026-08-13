@@ -1,4 +1,5 @@
 log2ram-repo-config (1.0.0) stable; urgency=medium
+
   * Initial package definition established.
   * description=Automatically configures the log2ram repository.
   * copyright_year=2026
@@ -7,4 +8,5 @@ log2ram-repo-config (1.0.0) stable; urgency=medium
   * repo.suites=${TARGET_CODENAME}
   * repo.components=main
   * repo.key_url=https://azlux.fr/repo.gpg
+
  -- curtistinkers <curtistinkers@gmail.com>  Thu, 13 Aug 2026 03:33:37 -0500
