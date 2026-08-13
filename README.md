@@ -1,6 +1,9 @@
 # Repository Configuration Package Generator
 
-This tool reads simple YAML text files that describe a package repository and turns them into installable Debian (`.deb`) packages. You can use it to automatically generate repository configuration files, signing keyrings, and keep a clean history of your changes.
+This tool reads simple YAML text files that describe a package repository and
+turns them into installable Debian (`.deb`) packages. You can use it to
+automatically generate repository configuration files, signing keyrings, and
+keep a clean history of your changes.
 
 ---
 
