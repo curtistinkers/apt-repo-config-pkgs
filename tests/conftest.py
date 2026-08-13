@@ -8,6 +8,15 @@ This file configures environment overrides and cross-platform paths for tests.
 import sys
 
 import pytest
+import yaml
+
+from package_generator import (
+    Logger,
+    PackageConfig,
+    ProjectConfig,
+    ProjectManifest,
+    RepositoryManifest,
+)
 
 
 # Ensure our Python testing environment can seamlessly see and import modules
@@ -326,3 +335,74 @@ def mock_changelog_template() -> str:
 
  -- {{ maintainer_name }} <{{ maintainer_email }}>  {{ current_date }}
 """
+
+
+@pytest.fixture
+def config_v1(manifest_v1: str) -> PackageConfig:
+    """Compiles the raw version 1.0.0 manifest string into a type-safe object.
+
+    Args:
+        manifest_v1: A shared test fixture providing the baseline manifest YAML string.
+
+    Returns:
+        A strongly typed PackageConfig domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_manifest = yaml.safe_load(manifest_v1)
+    return RepositoryManifest(raw_data=raw_manifest, logger=logger).config
+
+
+@pytest.fixture
+def config_v2(manifest_v2: str) -> PackageConfig:
+    """Compiles the raw version 1.0.0 manifest string into a type-safe object.
+
+    Args:
+        manifest_v2: A shared test fixture providing the baseline manifest YAML string.
+
+    Returns:
+        A strongly typed PackageConfig domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_manifest = yaml.safe_load(manifest_v2)
+    return RepositoryManifest(raw_data=raw_manifest, logger=logger).config
+
+
+@pytest.fixture
+def config_v3(manifest_v3: str) -> PackageConfig:
+    """Compiles the raw version 1.0.0 manifest string into a type-safe object.
+
+    Args:
+        manifest_v3: A shared test fixture providing the baseline manifest YAML string.
+
+    Returns:
+        A strongly typed PackageConfig domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_manifest = yaml.safe_load(manifest_v3)
+    return RepositoryManifest(raw_data=raw_manifest, logger=logger).config
+
+@pytest.fixture
+def project_manifest_object(project_config: str) -> ProjectManifest:
+    """Compiles the raw project config string into a type-safe object.
+
+    Args:
+        project_config: A test fixture providing a valid raw project YAML string.
+
+    Returns:
+        A strongly typed ProjectManifest domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_project_data = yaml.safe_load(project_config)
+    return ProjectManifest(raw_data=raw_project_data, logger=logger)
+
+@pytest.fixture
+def project_config_object(project_manifest_object: ProjectManifest) -> ProjectConfig:
+    """Returns ProjectConfig object from a ProjectManifest object.
+
+    Args:
+        project_manifest_object: A test fixture providing a ProjectManifest object.
+
+    Returns:
+        A strongly typed ProjectConfig domain value object instance.
+    """
+    return project_manifest_object.config
