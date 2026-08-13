@@ -6,6 +6,7 @@ command routing, and option validations managed by the CLI interface group.
 """
 
 from pathlib import Path
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -167,3 +168,162 @@ def test_unit_cli_build_subcommand_gracefully_handles_corrupted_project_config(
     # ASSERTIONS: It must flag a fatal failure and exit with 1
     assert result.exit_code == 1
     assert "EMERGENCY: Fatal validation failure inside global project config" in result.output
+
+
+def test_cli_build_re_raises_genuine_alternative_exceptions(
+    tmp_path: Path,
+    project_config: str,
+    manifest_v1: str,
+    mock_changelog_template: str,
+) -> None:
+    """Verifies that the build command bubbles up unexpected runtime exceptions.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        project_config: A test fixture providing raw project YAML text.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+        mock_changelog_template: A test fixture providing the mock changelog template layout.
+    """
+    runner = CliRunner()
+
+    # 1. Setup isolated directories matching the default expectations
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(project_config, encoding="utf-8")
+
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    (manifests_dir / "omv.yaml").write_text(manifest_v1, encoding="utf-8")
+
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    (templates_dir / "changelog.jinja2").write_text(mock_changelog_template, encoding="utf-8")
+
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # 2. Force the builder orchestrator to throw an unexpected RuntimeError exception
+    with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
+        mock_tree.side_effect = RuntimeError("Genuine unexpected layout execution failure.")
+
+        result = runner.invoke(main_cli, [
+            "build",
+            "--project-config", str(config_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(templates_dir),
+            "--sources-dir", str(sources_dir),
+        ])
+
+    assert result.exit_code == 1
+    assert "Genuine unexpected layout execution failure." in result.output
+
+
+def test_cli_clean_logs_error_when_directory_removal_fails(
+    tmp_path: Path,
+) -> None:
+    """Verifies that the clean command handles and logs directory purge exceptions.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+    """
+    runner = CliRunner()
+    sources_dir = tmp_path / "dpkg-sources"
+    sources_dir.mkdir(parents=True, exist_ok=True)
+
+    # Mock shutil.rmtree to simulate a permission error or file lock crash on Windows
+    with patch("shutil.rmtree") as mock_rmtree:
+        mock_rmtree.side_effect = OSError("Access denied or storage platter file lock.")
+
+        result = runner.invoke(main_cli, [
+            "clean",
+            "--sources-dir", str(sources_dir),
+        ])
+
+    assert result.exit_code == 0
+    assert "ERROR: Failed to remove directory tree structure" in result.output
+
+def test_cli_build_re_raises_alternative_value_errors(
+    tmp_path: Path,
+    project_config: str,
+    manifest_v1: str,
+) -> None:
+    """Verifies that the build command re-raises non-bump related ValueErrors."""
+    runner = CliRunner()
+
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(project_config, encoding="utf-8")
+
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    (manifests_dir / "omv.yaml").write_text(manifest_v1, encoding="utf-8")
+
+    # We can use flat paths here since we aren't testing changelog.py in this unit block
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    (templates_dir / "debian").mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+        # Force a ValueError that does NOT contain the version bump string parameter
+    with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
+        mock_tree.side_effect = ValueError("Fatal architecture violation: rogue template collision.")
+
+        result = runner.invoke(main_cli, [
+            "build",
+            "--project-config", str(config_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(templates_dir),
+            "--sources-dir", str(sources_dir),
+        ])
+
+    # FIX: Verify that the outer loop handles the re-raised ValueError, logs it, and exits cleanly
+    assert result.exit_code == 1
+    assert "Fatal architecture violation: rogue template collision." in result.output
+
+
+def test_cli_build_terminates_on_invalid_project_yaml_file(
+    tmp_path: Path,
+) -> None:
+    """Verifies that build terminates with code 1 if project config is corrupted."""
+    runner = CliRunner()
+
+    # Write structural garbage to the file to force yaml parsing errors
+    corrupted_config = tmp_path / "config.yaml"
+    corrupted_config.write_text("::: global_keys: [missing_indentation_garbage", encoding="utf-8")
+
+    result = runner.invoke(main_cli, [
+        "build",
+        "--project-config", str(corrupted_config),
+        "--manifests-dir", str(tmp_path)
+    ])
+
+    assert result.exit_code == 1
+    assert "Fatal validation failure inside global project config" in result.output
+
+
+def test_cli_build_skips_manifest_when_user_rejects_auto_bump_prompt(
+    tmp_path: Path,
+    project_config: str,
+    manifest_v1: str,
+) -> None:
+    """Verifies skipping a manifest file when user selects 'No' to auto-bump."""
+    runner = CliRunner()
+
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(project_config, encoding="utf-8")
+
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    (manifests_dir / "omv.yaml").write_text(manifest_v1, encoding="utf-8")
+
+    # Force an un-bumped version collision by mocking the builder tree pass
+    with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
+        mock_tree.side_effect = ValueError("Manifest modified without version bump for 'test-repo'.")
+
+        # Simulate typing 'n' (No) directly into the interactive terminal click prompt channel
+        result = runner.invoke(main_cli, [
+            "build",
+            "--project-config", str(config_file),
+            "--manifests-dir", str(manifests_dir),
+            "--sources-dir", str(tmp_path / "dpkg-sources")
+        ], input="n\n")
+
+    assert result.exit_code == 0
+    assert "Skipping package file omv.yaml due to state version mismatch" in result.output
