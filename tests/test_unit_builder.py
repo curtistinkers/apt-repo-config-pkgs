@@ -5,6 +5,7 @@ Discrete unit specifications validating the folder orchestration and file
 generation layer managed by the DebianPackageBuilder class.
 """
 
+import stat
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -42,6 +43,7 @@ def mock_builder_ctx(
 
     # Write out standard configuration file blueprints into the debian folder
     (templates_debian_dir / "control").write_text("Package: {{ package_name }}", encoding="utf-8")
+    (templates_debian_dir / "install").write_text("usr/share/keyrings usr/share", encoding="utf-8")
     (templates_debian_dir / "rules").write_text("#!/usr/bin/make", encoding="utf-8")
 
     # FIX: Write changelog.jinja2 directly into the parent root directory container!
@@ -91,6 +93,17 @@ def test_builder_build_clean_package_directory_tree(
         project_config=project_config_object,
     )
 
+    # Verify that BOTH files have their execution flags completely stripped off
+    install_file = target_debian_dir / "install"
+    rules_file = target_debian_dir / "rules"
+
+    install_mode = install_file.stat().st_mode
+    rules_mode = rules_file.stat().st_mode
+
+    # Assert that neither file possesses the executable bit mask flag property
+    assert not (install_mode & stat.S_IXUSR)
+    assert not (rules_mode & stat.S_IXUSR)
+
     # Verify the physical directory path exists matching the schema
     expected_path = sources_dir / "test-repo" / "debian"
     assert target_debian_dir == expected_path
@@ -105,7 +118,7 @@ def test_builder_build_clean_package_directory_tree(
 
     # Verify that the builder dynamically looped through the template folder
     # and generated all target configuration files onto the platter
-    mandatory_files = ["control", "rules"]
+    mandatory_files = ["control", "rules", "install"]
     for filename in mandatory_files:
         expected_file = target_debian_dir / filename
         assert expected_file.exists(), f"The builder failed to generate file: {filename}"

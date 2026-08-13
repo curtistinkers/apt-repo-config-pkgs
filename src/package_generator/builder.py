@@ -99,6 +99,18 @@ class DebianPackageBuilder:
             project_config=project_config,
         )
 
+        self._logger.debug(
+            "Applying flat 644 permission pass across all generated package files..."
+        )
+
+        # Force absolutely every file inside the directory to 0o644
+        for generated_file in target_debian_dir.iterdir():
+            if generated_file.is_file():
+                generated_file.chmod(0o644)
+                self._logger.debug(
+                    f"Forced read-write permissions (644) for file: {generated_file.name}"
+                )
+
         self._logger.info(f"Successfully finalized debian/ container at: {target_debian_dir}")
         return target_debian_dir
 
