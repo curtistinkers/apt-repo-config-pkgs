@@ -230,7 +230,9 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
     logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
 
     # Configure the fixture's mocks directly:
-    mock_downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT"
+    mock_downloader.download_bytes.return_value = (
+        b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT"
+    )
     mock_gpg.dearmor.return_value = b"MOCK_BINARY_DEARMORED_BYTES"
 
     assert config_v1.dynamic_keyring is False
@@ -251,7 +253,9 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
 
     # Verify that the builder fed that raw text straight into the GPG dearmor engine
     # Note: We slice off headers if your production code decodes it first
-    mock_gpg.dearmor.assert_called_once_with(ascii_text="-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT")
+    mock_gpg.dearmor.assert_called_once_with(
+        ascii_text="-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT"
+    )
 
     # Verify that the resulting binary bytes were physically written to the expected path
     assert expected_key_file.exists()
