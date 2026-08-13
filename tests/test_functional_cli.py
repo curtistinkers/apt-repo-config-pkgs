@@ -148,7 +148,7 @@ def test_cli_builds_control_file(
         "\n"
         "Package: test-repo-repo-config\n"
         "Architecture: all\n"
-        "Depends: ${misc:Depends}, wget, gnupg\n"
+        "Depends: ${misc:Depends}\n"
         "Description: Test repository package layout configuration.\n"
         " This package automatically manages the APT repository configuration and\n"
         " secure cryptographic keyrings for test-repo."

@@ -1,6 +1,8 @@
 {# templates/changelog.jinja2 #}
 {{ package_name }}{{ package_suffix }} ({{ version }}) stable; urgency=medium
+
   {% for change in changelog_bullets %}
   * {{ change }}
   {% endfor %}
+
  -- {{ maintainer_name }} <{{ maintainer_email }}>  {{ current_date }}
