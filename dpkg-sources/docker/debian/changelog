@@ -1,3 +1,10 @@
+docker-repo-config (1.0.2) stable; urgency=medium
+
+  * Updated version to 1.0.2
+  * Modified repo.url: http://download.docker.com/linux/${TARGET_DIST}
+
+ -- curtistinkers <curtistinkers@gmail.com>  Thu, 13 Aug 2026 05:36:32 -0500
+
 docker-repo-config (1.0.1) stable; urgency=medium
 
   * Updated version to 1.0.1
