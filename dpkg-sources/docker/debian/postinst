@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # =============================================================================
 # Debian Post-Installation Script (postinst)
 # Handles the dynamic generation of the deb822 APT repository source file.
@@ -17,7 +17,7 @@ DEBUG="true"
 # -----------------------------------------------------------------------------
 log_debug() {
     if [ "${DEBUG}" = "true" ]; then
-        echo "[DEBUG-TRACE] $1"
+        echo "[docker-repo-config] $1"
     fi
 }
 
@@ -72,7 +72,7 @@ generate_sources_file() {
 
     # Process template values passed down by the Python builder engine.
     # We substitute runtime ${DIST} and ${CODENAME} values securely via shell expansion.
-    RAW_URI="https://docker.com/linux/${TARGET_DIST}"
+    RAW_URI="https://download.docker.com/linux/${TARGET_DIST}"
     RAW_SUITE="${TARGET_CODENAME}"
     RAW_COMPONENTS="stable"
 
@@ -104,7 +104,17 @@ EOF
 # This function is only written to disc if 'dynamic_keyring: true' is requested.
 # ==============================================================================
 fetch_dynamic_keyring() {
-    KEYRING_PATH="/usr/share/keyrings/docker-archive-keyring.gpg"
+    KEYRING_DIR="/usr/share/keyrings"
+
+    if [ ! -d "${KEYRING_DIR}" ]; then
+        log_debug "Keyring directory does not exit. Creating new directory at: ${KEYRING_DIR}"
+        mkdir -p "${KEYRING_DIR}"
+    fi
+
+    KEYRING_PATH="${KEYRING_DIR}/docker-archive-keyring.gpg"
+
+    log_debug "Preparing to download docker apt key to: ${KEYRING_PATH}"
+
     RAW_KEY_URL="https://download.docker.com/linux/${TARGET_DIST}/gpg"
 
     # Establish a safe, temporary sandbox file path for the initial download
@@ -112,12 +122,11 @@ fetch_dynamic_keyring() {
 
     eval EVAL_KEY_URL="\"${RAW_KEY_URL}\""
 
-    mkdir -p /usr/share/keyrings
-
     # 1. Download the raw file stream into our temporary staging path container
     if wget -qO "${TEMP_STAGING_KEY}" "${EVAL_KEY_URL}"; then
         # 2. Inspect the file header line natively to detect ASCII text armor
         if grep -q "BEGIN PGP PUBLIC KEY BLOCK" "${TEMP_STAGING_KEY}"; then
+            log_debug "Key is armored, trying to dearmor..."
             # Format is ASCII-Armored text: Convert to binary format before saving
             if gpg --dearmor < "${TEMP_STAGING_KEY}" > "${KEYRING_PATH}"; then
                 chmod 644 "${KEYRING_PATH}"
@@ -131,6 +140,8 @@ fetch_dynamic_keyring() {
             mv "${TEMP_STAGING_KEY}" "${KEYRING_PATH}"
             chmod 644 "${KEYRING_PATH}"
         fi
+
+        log_debug "Keyring successfully moved to keyring path"
 
         # Clean up our temporary staging workspace file cleanly
         rm -f "${TEMP_STAGING_KEY}"
@@ -150,7 +161,7 @@ fetch_dynamic_keyring() {
 main() {
     # Debian passes "configure" as the first argument during standard installations
 
-    if [ "$1" = "configure" ]; then
+    if [ "$1" = "configure" ] || [ "$1" = "upgrade" ]; then
         log_debug "Executing postinst orchestration for package: docker"
         normalize_os_environment
         

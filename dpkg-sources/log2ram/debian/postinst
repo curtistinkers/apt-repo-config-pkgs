@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # =============================================================================
 # Debian Post-Installation Script (postinst)
 # Handles the dynamic generation of the deb822 APT repository source file.
@@ -17,7 +17,7 @@ DEBUG="true"
 # -----------------------------------------------------------------------------
 log_debug() {
     if [ "${DEBUG}" = "true" ]; then
-        echo "[DEBUG-TRACE] $1"
+        echo "[log2ram-repo-config] $1"
     fi
 }
 
@@ -103,7 +103,7 @@ EOF
 main() {
     # Debian passes "configure" as the first argument during standard installations
 
-    if [ "$1" = "configure" ]; then
+    if [ "$1" = "configure" ] || [ "$1" = "upgrade" ]; then
         log_debug "Executing postinst orchestration for package: log2ram"
         normalize_os_environment
         
