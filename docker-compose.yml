@@ -1,0 +1,13 @@
+services:
+  debian-packager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: debian-package-compiler
+    volumes:
+      # Mount your host directories straight into the container environment workspace
+      - ./dpkg-sources:/workspace/dpkg-sources
+      - ./dist:/workspace/dist
+    # environment:
+      # Optional: Pass flag variables down to suppress lintian or signing warnings if needed
+      # - DEB_BUILD_OPTIONS=nocheck

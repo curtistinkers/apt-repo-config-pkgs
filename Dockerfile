@@ -19,4 +19,10 @@ WORKDIR /workspace
 # By default, run debuild with flags optimized for automated workflows:
 # -b: Binary-only package compilation (no source .dsc generation)
 # -uc -us: Unsigned changelog and unsigned source (bypasses local GPG key requirements)
-ENTRYPOINT ["debuild", "-b", "-uc", "-us"]
+# ENTRYPOINT ["debuild", "-b", "-uc", "-us"]
+
+# Copy and secure our automation entrypoint pipeline script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
