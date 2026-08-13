@@ -68,7 +68,7 @@ class DebianTemplateCompiler:
         # Pass the fully combined context map straight into the template natively
         compiled_output = template.render(**render_context)
 
-        self._logger.info(f"Successfully compiled template configuration layout: {template_name}")
+        self._logger.debug(f"Successfully compiled template configuration layout: {template_name}")
         return compiled_output
 
     def _compile_os_normalization_rules(self, package_config: PackageConfig) -> str:
