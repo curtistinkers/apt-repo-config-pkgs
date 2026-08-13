@@ -38,6 +38,7 @@ class DebianTemplateCompiler:
         template_name: str,
         package_config: PackageConfig,
         project_config: ProjectConfig,
+        **kwargs: Any,  # FIX 1: Add a kwargs collection tray to safely accept custom fields like changelog data
     ) -> str:
         """Loads a target template file from disk and renders its variable tokens.
 
@@ -45,6 +46,7 @@ class DebianTemplateCompiler:
             template_name: The file name string of the target template block.
             package_config: Strongly typed package parameters (e.g. name, version).
             project_config: Global project parameters (e.g. maintainer data).
+            **kwargs: Dynamic contextual tokens merged directly into the rendering loop.
 
         Returns:
             The compiled uncolored text block stream containing injected values.
@@ -52,10 +54,28 @@ class DebianTemplateCompiler:
         self._logger.debug(f"Loading template file asset track: {template_name}")
         template = self._env.get_template(template_name)
 
-        self._logger.debug("Mapping strongly typed fields into flat template context variables...")
+        # 1. Delegate the shell script loop generation out to an isolated sub-helper
+        os_normalization_rules = self._compile_os_normalization_rules(package_config)
 
-        # Dynamically build out the raw bash case statement rows from our DVO dictionary map
+        # 2. Delegate context assembly out to a helper, passing kwargs forward cleanly
+        render_context = self._build_render_context(
+            package_config=package_config,
+            project_config=project_config,
+            os_normalization_rules=os_normalization_rules,
+            extra_context=kwargs
+        )
+
+        # Pass the fully combined context map straight into the template natively
+        compiled_output = template.render(**render_context)
+
+        self._logger.info(f"Successfully compiled template configuration layout: {template_name}")
+        return compiled_output
+
+    def _compile_os_normalization_rules(self, package_config: PackageConfig) -> str:
+        """Assembles raw Bash case statement strings from the package OS mappings data model."""
+        self._logger.debug("Mapping strongly typed fields into flat template context variables...")
         compiled_rules = []
+
         for match_key, mapping in package_config.os_mappings.items():
             self._logger.debug(
                 f"Compiling normalization case mapping rule for flavor: [{match_key}] "
@@ -70,21 +90,26 @@ class DebianTemplateCompiler:
             )
             compiled_rules.append(rule_block)
 
-        os_normalization_rules_str = "\n".join(compiled_rules)
+        return "\n".join(compiled_rules)
 
-        os_normalization_rules_str = "\n".join(compiled_rules)
-
-        # translate DVO structures into flat tokens matching the control template
-        render_context: dict[str, Any] = {
+    def _build_render_context(
+        self,
+        package_config: PackageConfig,
+        project_config: ProjectConfig,
+        os_normalization_rules: str,
+        extra_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Assembles the complete, unified template variables map supporting all engine lanes."""
+        context: dict[str, Any] = {
             "package_name": package_config.name,
             "short_description": package_config.description,
             "version": package_config.version,
             "copyright_year": package_config.copyright_year,
             "dynamic_keyring": package_config.dynamic_keyring,
-            "repo_url": package_config.repo.url,
-            "repo_suites": package_config.repo.suites,
-            "repo_components": package_config.repo.components,
-            "repo_key_url": package_config.repo.key_url,
+            "repo_url": package_config.repo.url if package_config.repo else "",
+            "repo_suites": package_config.repo.suites if package_config.repo else "",
+            "repo_components": package_config.repo.components if package_config.repo else "",
+            "repo_key_url": package_config.repo.key_url if package_config.repo else "",
             "os_mappings": package_config.os_mappings,
 
             "maintainer_name": project_config.maintainer_name,
@@ -93,11 +118,9 @@ class DebianTemplateCompiler:
             "repository_url": project_config.repository_url,
             "package_suffix": project_config.package_suffix,
 
-            "os_normalization_rules": os_normalization_rules_str,
+            "os_normalization_rules": os_normalization_rules,
         }
 
-        # Pass the context map straight into the template context natively
-        compiled_output = template.render(**render_context)
-
-        self._logger.info(f"Successfully compiled template configuration layout: {template_name}")
-        return compiled_output
+        # Safely merge any dynamic tokens passed from separate services (like Changelog bullets)
+        context.update(extra_context)
+        return context
