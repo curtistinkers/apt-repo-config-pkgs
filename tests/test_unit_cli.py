@@ -377,6 +377,7 @@ def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
     tmp_path: Path,
     project_config: str,
     manifest_v1: str,
+    mock_manifest_template: str,
 ) -> None:
     """Verifies rewriting a manifest file on disk when a user inputs 'Yes' to an auto-bump.
 
@@ -384,6 +385,7 @@ def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
         tmp_path: A built-in pytest fixture providing a temporary directory path.
         project_config: A test fixture providing raw project YAML text.
         manifest_v1: A test fixture providing a valid raw manifest YAML string.
+        mock_manifest_template: TODO
     """
     runner = CliRunner()
 
@@ -392,13 +394,16 @@ def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
 
     manifests_dir = tmp_path / "manifests"
     manifests_dir.mkdir()
-    manifest_file = manifests_dir / "omv.yaml"
+    manifest_file = manifests_dir / "test-repo.yaml"
     manifest_file.write_text(manifest_v1, encoding="utf-8")
 
     templates_dir = tmp_path / "templates"
     templates_dir.mkdir()
     (templates_dir / "debian").mkdir()
     sources_dir = tmp_path / "dpkg-sources"
+
+    # Seed the mandatory manifest template layout to verify the clean rewrite path
+    (templates_dir / "manifest.jinja2").write_text(mock_manifest_template, encoding="utf-8")
 
     # Side effect sequence: throw a version collision error on pass 1, then pass natively on pass 2
     with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
@@ -418,7 +423,7 @@ def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
 
     # Verify that the true-evaluation branch executed the rewrite, reloaded, and finalized the build
     assert result.exit_code == 0
-    assert "Auto-bumping manifest file omv.yaml forward to v1.0.1" in result.output
+    assert "Auto-bumping manifest file test-repo.yaml forward to v1.0.1" in result.output
     assert "Total built: 1" in result.output
 
     # Confirm that the file stream on the disk platter was physically modified to v1.0.1
