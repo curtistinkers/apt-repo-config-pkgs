@@ -7,7 +7,7 @@ Standards-Version: 4.6.2
 
 Package: log2ram-repo-config
 Architecture: all
-Depends: ${misc:Depends}, wget, gnupg
+Depends: ${misc:Depends}
 Description: Automatically configures the log2ram repository.
  This package automatically manages the APT repository configuration and
  secure cryptographic keyrings for log2ram.

@@ -7,7 +7,7 @@ Standards-Version: 4.6.2
 
 Package: openmediavault-bookworm-repo-config
 Architecture: all
-Depends: ${misc:Depends}, wget, gnupg
+Depends: ${misc:Depends}
 Description: Configures the official OpenMediaVault repository for Debian 12.
  This package automatically manages the APT repository configuration and
  secure cryptographic keyrings for openmediavault-bookworm.

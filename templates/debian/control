@@ -7,7 +7,7 @@ Standards-Version: 4.6.2
 
 Package: {{ package_name }}{{ package_suffix }}
 Architecture: all
-Depends: ${misc:Depends}, wget, gnupg
+Depends: ${misc:Depends}{% if dynamic_keyring %}, wget, gnupg{% endif %}
 Description: {{ short_description }}
  This package automatically manages the APT repository configuration and
  secure cryptographic keyrings for {{ package_name }}.

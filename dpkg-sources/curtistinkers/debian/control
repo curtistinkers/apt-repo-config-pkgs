@@ -7,7 +7,7 @@ Standards-Version: 4.6.2
 
 Package: curtistinkers-repo-config
 Architecture: all
-Depends: ${misc:Depends}, wget, gnupg
+Depends: ${misc:Depends}
 Description: My private repository.
  This package automatically manages the APT repository configuration and
  secure cryptographic keyrings for curtistinkers.
