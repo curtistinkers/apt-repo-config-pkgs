@@ -26,7 +26,7 @@ log_debug() {
 # Explicitly deletes the dynamic .sources target file from the system folder.
 # -----------------------------------------------------------------------------
 purge_repository_configuration() {
-    TARGET_FILE="/etc/apt/sources.list.d/openmediavault.sources"
+    TARGET_FILE="/etc/apt/sources.list.d/openmediavault-trixie.sources"
 
     if [ -f "${TARGET_FILE}" ]; then
         log_debug "Removing orphan repository configuration file: ${TARGET_FILE}"
@@ -47,7 +47,7 @@ main() {
 
     # Wipe the file during standard removals or explicit system purging loops
     if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-        log_debug "Executing postrm cleanup logic for package: openmediavault"
+        log_debug "Executing postrm cleanup logic for package: openmediavault-trixie"
         purge_repository_configuration
         
         

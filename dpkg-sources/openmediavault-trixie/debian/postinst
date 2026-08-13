@@ -64,7 +64,7 @@ normalize_os_environment() {
 # Evaluates variables and writes out the modern deb822 source file.
 # -----------------------------------------------------------------------------
 generate_sources_file() {
-    OUTPUT_PATH="/etc/apt/sources.list.d/openmediavault.sources"
+    OUTPUT_PATH="/etc/apt/sources.list.d/openmediavault-trixie.sources"
     log_debug "Preparing to generate targeted repository configuration at: ${OUTPUT_PATH}"
 
     # Process template values passed down by the Python builder engine.
@@ -86,7 +86,7 @@ Types: deb
 URIs: ${EVAL_URI}
 Suites: ${EVAL_SUITE}
 Components: ${EVAL_COMPONENTS}
-Signed-By: /usr/share/keyrings/openmediavault-archive-keyring.gpg
+Signed-By: /usr/share/keyrings/openmediavault-trixie-archive-keyring.gpg
 EOF
 
     # Restrict permissions to match standard secure root layouts
@@ -104,7 +104,7 @@ main() {
     # Debian passes "configure" as the first argument during standard installations
 
     if [ "$1" = "configure" ]; then
-        log_debug "Executing postinst orchestration for package: openmediavault"
+        log_debug "Executing postinst orchestration for package: openmediavault-trixie"
         normalize_os_environment
         
         

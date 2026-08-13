@@ -1,4 +1,4 @@
-name: openmediavault
+name: openmediavault-trixie
 description: Configures the official OpenMediaVault repository for Debian 13.
 version: 1.0.0
 copyright_year: 2026

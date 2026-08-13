@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Source: https://github.com/curtistinkers/deb-repo-config-packages/dpkg-sources/openmediavault
-Upstream-Name: openmediavault-repo-config
+Source: https://github.com/curtistinkers/deb-repo-config-packages/dpkg-sources/openmediavault-trixie
+Upstream-Name: openmediavault-trixie-repo-config
 Upstream-Contact: curtistinkers <curtistinkers@gmail.com>
 
 Files: *
