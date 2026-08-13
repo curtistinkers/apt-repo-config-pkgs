@@ -1,11 +1,11 @@
-Source: {{ package_name }}-repo-config
+Source: {{ package_name }}{{ package_suffix }}
 Section: utils
 Priority: optional
 Maintainer: {{ maintainer_name }} <{{ maintainer_email }}>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.6.2
 
-Package: {{ package_name }}-repo-config
+Package: {{ package_name }}{{ package_suffix }}
 Architecture: all
 Depends: ${misc:Depends}, wget, gnupg
 Description: {{ short_description }}
