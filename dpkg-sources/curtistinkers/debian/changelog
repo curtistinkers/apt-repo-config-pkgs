@@ -1,5 +1,4 @@
-curtistinkers (1.0.0) stable; urgency=medium
-
+curtistinkers-repo-config (1.0.0) stable; urgency=medium
   * Initial package definition established.
   * description=My private repository.
   * copyright_year=2026
@@ -12,5 +11,4 @@ curtistinkers (1.0.0) stable; urgency=medium
   * os_mappings.pop|linuxmint|elementary.codename=${UBUNTU_CODENAME}
   * os_mappings.raspbian.distro=debian
   * os_mappings.raspbian.codename=${DEBIAN_CODENAME}
-
- -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 16:38:47 -0500
+ -- curtistinkers <curtistinkers@gmail.com>  Thu, 13 Aug 2026 03:33:36 -0500

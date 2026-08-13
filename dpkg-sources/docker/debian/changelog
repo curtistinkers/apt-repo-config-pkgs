@@ -1,5 +1,4 @@
-docker (1.0.0) stable; urgency=medium
-
+docker-repo-config (1.0.0) stable; urgency=medium
   * Initial package definition established.
   * description=Configures the official Docker CE repository.
   * copyright_year=2026
@@ -10,5 +9,4 @@ docker (1.0.0) stable; urgency=medium
   * repo.key_url=https://download.docker.com/linux/${TARGET_DIST}/gpg
   * os_mappings.pop|linuxmint|elementary.distro=ubuntu
   * os_mappings.pop|linuxmint|elementary.codename=${UBUNTU_CODENAME}
-
- -- curtistinkers <curtistinkers@gmail.com>  Wed, 12 Aug 2026 16:38:47 -0500
+ -- curtistinkers <curtistinkers@gmail.com>  Thu, 13 Aug 2026 03:33:37 -0500
