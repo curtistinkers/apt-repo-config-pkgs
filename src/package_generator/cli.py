@@ -11,6 +11,7 @@ from pathlib import Path
 
 import click
 import yaml
+from packaging.version import Version
 
 from .builder import DebianPackageBuilder
 from .compiler import DebianTemplateCompiler
@@ -114,35 +115,46 @@ def build_packages_command(
     logger.debug(f"Reading templates from directory: {templates_dir}")
     logger.debug(f"Targeting outputs to directory: {sources_dir}")
 
-    try:
-        with open(project_config, encoding="utf-8") as project_stream:
-            raw_project_data = yaml.safe_load(project_stream)
+    proj_manifest = _initialize_project_context(project_config, logger)
 
-        proj_manifest = ProjectManifest(raw_data=raw_project_data, logger=logger)
-
-    except Exception as project_error:
-        logger.emergency(f"Fatal validation failure inside global project config: {project_error}")
-        sys.exit(1)
-
-    # Use the user-supplied templates directory path dynamically
-    templates_path = templates_dir / "debian"
-    compiler = DebianTemplateCompiler(templates_dir=templates_path, logger=logger)
-
-
-
-    downloader_service = Downloader(logger=logger)
-    gpg_service = GpgEngine(logger=logger)
-
-    # Inject the services down to the package directory builder coordinator
+    compiler = DebianTemplateCompiler(templates_dir=templates_dir / "debian", logger=logger)
     builder = DebianPackageBuilder(
         sources_dir=sources_dir,
         templates_dir=templates_dir,
         logger=logger,
         compiler=compiler,
-        downloader=downloader_service,
-        gpg_engine=gpg_service,
+        downloader=Downloader(logger=logger),
+        gpg_engine=GpgEngine(logger=logger),
     )
 
+    _orchestrate_manifest_build_loop(
+        manifests_dir=manifests_dir,
+        project_config=proj_manifest,
+        builder=builder,
+        bump_version=bump_version,
+        logger=logger
+    )
+
+
+def _initialize_project_context(project_config: Path, logger: Logger) -> ProjectManifest:
+    """Loads and compiles the global project configuration manifest."""
+    try:
+        with open(project_config, encoding="utf-8") as project_stream:
+            raw_project_data = yaml.safe_load(project_stream)
+        return ProjectManifest(raw_data=raw_project_data, logger=logger)
+    except Exception as project_error:
+        logger.emergency(f"Fatal validation failure inside global project config: {project_error}")
+        sys.exit(1)
+
+
+def _orchestrate_manifest_build_loop(
+    manifests_dir: Path,
+    project_config: ProjectManifest,
+    builder: DebianPackageBuilder,
+    bump_version: bool,
+    logger: Logger,
+) -> None:
+    """Iterates chronologically through directory contents to build manifest records."""
     processed_count = 0
 
     for item in sorted(manifests_dir.iterdir()):
@@ -154,69 +166,65 @@ def build_packages_command(
                     raw_yaml_data = yaml.safe_load(file_stream)
 
                 manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
-
-                # FIX 2: Execute an active loop block to handle interactive auto-bumps
                 compiled_successfully = False
+
                 while not compiled_successfully:
                     try:
                         builder.create_package_tree(
                             config=manifest.config,
-                            project_config=proj_manifest.config
+                            project_config=project_config.config
                         )
                         processed_count += 1
                         compiled_successfully = True
                     except ValueError as validation_error:
-                        # Catch the unique string exception raised by our changelog engine
-                        if "Manifest modified without version bump" in str(validation_error):
-
-                            # Calculate the next logical micro version string value automatically
-                            from packaging.version import Version
-                            current_ver = Version(manifest.config.version)
-                            next_version_str = (
-                                f"{current_ver.major}.{current_ver.minor}.{current_ver.micro + 1}"
-                            )
-
-                            # Intercept flag state or launch an interactive click
-                            # confirmation prompt block
-                            prompt_msg = (
-                                f"Manifest modified without version bump "
-                                f"for '{manifest.config.name}'. Auto-bump version "
-                                f"identifier to {next_version_str}?"
-                            )
-
-                            if bump_version or click.confirm(prompt_msg, default=False):
-                                logger.info(
-                                    f"Auto-bumping manifest file {item.name} "
-                                    f"forward to v{next_version_str}..."
-                                    )
-
-                                # Rewrite the physical YAML manifest file directly on
-                                # disk platter tracks
-                                raw_yaml_data["version"] = next_version_str
-                                with open(item, "w", encoding="utf-8") as yaml_out_stream:
-                                    yaml.safe_dump(
-                                        raw_yaml_data, yaml_out_stream, default_flow_style=False
-                                    )
-
-                                # Reload the manifest file instance state values into memory
-                                # and cycle loop to re-try build
-                                manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
-                                continue
-                            else:
-                                # User selected "No": Log an alert message, break loop,
-                                # and skip file gracefully
-                                logger.alert(
-                                    f"Skipping package file {item.name} due to "
-                                    f"state version mismatch."
-                                )
-                                break
-                        raise  # Re-raise alternative genuine errors like rogue changelog templates
+                        manifest, compiled_successfully = _handle_version_bump_prompt(
+                            item=item,
+                            raw_yaml_data=raw_yaml_data,
+                            manifest=manifest,
+                            validation_error=validation_error,
+                            bump_version=bump_version,
+                            logger=logger
+                        )
 
             except Exception as error:
                 logger.emergency(f"Execution Error processing {item.name}: {error}")
                 sys.exit(1)
 
     logger.info(f"Package folder orchestration completed. Total built: {processed_count}")
+
+
+def _handle_version_bump_prompt(
+    item: Path,
+    raw_yaml_data: dict,
+    manifest: RepositoryManifest,
+    validation_error: ValueError,
+    bump_version: bool,
+    logger: Logger,
+) -> tuple[RepositoryManifest, bool]:
+    """Evaluates version bumps via prompts or re-raises generic ValueErrors."""
+    if "Manifest modified without version bump" in str(validation_error):
+        current_ver = Version(manifest.config.version)
+        next_version_str = f"{current_ver.major}.{current_ver.minor}.{current_ver.micro + 1}"
+
+        prompt_msg = (
+            f"Manifest modified without version bump for '{manifest.config.name}'. "
+            f"Auto-bump version identifier to {next_version_str}?"
+        )
+
+        if bump_version or click.confirm(prompt_msg, default=False):
+            logger.info(f"Auto-bumping manifest file {item.name} forward to v{next_version_str}...")
+            raw_yaml_data["version"] = next_version_str
+            with open(item, "w", encoding="utf-8") as yaml_out_stream:
+                yaml.safe_dump(raw_yaml_data, yaml_out_stream, default_flow_style=False)
+
+            reloaded_manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
+            return reloaded_manifest, False
+        else:
+            logger.alert(f"Skipping package file {item.name} due to state version mismatch.")
+            return manifest, True
+
+    # This maps directly to your missing Line 213 coverage target block!
+    raise validation_error
 
 
 @main_cli.command(name="clean")
