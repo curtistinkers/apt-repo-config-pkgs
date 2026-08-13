@@ -263,7 +263,9 @@ def test_cli_build_re_raises_alternative_value_errors(
 
         # Force a ValueError that does NOT contain the version bump string parameter
     with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
-        mock_tree.side_effect = ValueError("Fatal architecture violation: rogue template collision.")
+        mock_tree.side_effect = ValueError(
+            "Fatal architecture violation: rogue template collision."
+            )
 
         result = runner.invoke(main_cli, [
             "build",
@@ -315,7 +317,9 @@ def test_cli_build_skips_manifest_when_user_rejects_auto_bump_prompt(
 
     # Force an un-bumped version collision by mocking the builder tree pass
     with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
-        mock_tree.side_effect = ValueError("Manifest modified without version bump for 'test-repo'.")
+        mock_tree.side_effect = ValueError(
+            "Manifest modified without version bump for 'test-repo'."
+            )
 
         # Simulate typing 'n' (No) directly into the interactive terminal click prompt channel
         result = runner.invoke(main_cli, [
@@ -327,3 +331,96 @@ def test_cli_build_skips_manifest_when_user_rejects_auto_bump_prompt(
 
     assert result.exit_code == 0
     assert "Skipping package file omv.yaml due to state version mismatch" in result.output
+
+def test_cli_build_successfully_processes_valid_manifests(
+    tmp_path: Path,
+    project_config: str,
+    manifest_v1: str,
+) -> None:
+    """Verifies that the build command completes successfully on clean runs.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        project_config: A test fixture providing raw project YAML text.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+    """
+    runner = CliRunner()
+
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(project_config, encoding="utf-8")
+
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    (manifests_dir / "omv.yaml").write_text(manifest_v1, encoding="utf-8")
+
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    (templates_dir / "debian").mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Mock create_package_tree to do absolutely nothing (simulate a perfect clean pass)
+    with patch("package_generator.cli.DebianPackageBuilder.create_package_tree"):
+        result = runner.invoke(main_cli, [
+            "build",
+            "--project-config", str(config_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(templates_dir),
+            "--sources-dir", str(sources_dir),
+        ])
+
+    # This pass forces the loop to hit processed_count += 1 and compiled_successfully = True
+    assert result.exit_code == 0
+    assert "Total built: 1" in result.output
+
+
+def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
+    tmp_path: Path,
+    project_config: str,
+    manifest_v1: str,
+) -> None:
+    """Verifies rewriting a manifest file on disk when a user inputs 'Yes' to an auto-bump.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        project_config: A test fixture providing raw project YAML text.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+    """
+    runner = CliRunner()
+
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(project_config, encoding="utf-8")
+
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+    manifest_file = manifests_dir / "omv.yaml"
+    manifest_file.write_text(manifest_v1, encoding="utf-8")
+
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    (templates_dir / "debian").mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    # Side effect sequence: throw a version collision error on pass 1, then pass natively on pass 2
+    with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
+        mock_tree.side_effect = [
+            ValueError("Manifest modified without version bump for 'test-repo'."),
+            None
+        ]
+
+        # Simulate typing 'y' (Yes) directly into the interactive Click terminal prompt
+        result = runner.invoke(main_cli, [
+            "build",
+            "--project-config", str(config_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(templates_dir),
+            "--sources-dir", str(sources_dir),
+        ], input="y\n")
+
+    # Verify that the true-evaluation branch executed the rewrite, reloaded, and finalized the build
+    assert result.exit_code == 0
+    assert "Auto-bumping manifest file omv.yaml forward to v1.0.1" in result.output
+    assert "Total built: 1" in result.output
+
+    # Confirm that the file stream on the disk platter was physically modified to v1.0.1
+    updated_manifest_text = manifest_file.read_text(encoding="utf-8")
+    assert "version: 1.0.1" in updated_manifest_text
