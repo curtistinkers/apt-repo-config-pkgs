@@ -5,6 +5,7 @@ Maps incoming terminal arguments, subcommands, and debug flags to core business
 logic orchestration layers.
 """
 
+import shutil
 import sys
 from pathlib import Path
 
@@ -13,6 +14,8 @@ import yaml
 
 from .builder import DebianPackageBuilder
 from .compiler import DebianTemplateCompiler
+from .downloader import Downloader
+from .gpg import GpgEngine
 from .logger import Logger
 from .project_manifest import ProjectManifest
 from .repository_manifest import RepositoryManifest
@@ -59,7 +62,10 @@ def main_cli() -> None:
     "--bump-version",
     is_flag=True,
     default=False,
-    help="TODO: Add help text."
+    help=(
+        "Automatically bumps version parameters and rewrites manifests "
+        "without interactive prompts if configuration changes are detected."
+    )
 )
 def build_packages_command(
     project_config: Path,
@@ -122,8 +128,7 @@ def build_packages_command(
     templates_path = templates_dir / "debian"
     compiler = DebianTemplateCompiler(templates_dir=templates_path, logger=logger)
 
-    from .downloader import Downloader
-    from .gpg import GpgEngine
+
 
     downloader_service = Downloader(logger=logger)
     gpg_service = GpgEngine(logger=logger)
@@ -131,6 +136,7 @@ def build_packages_command(
     # Inject the services down to the package directory builder coordinator
     builder = DebianPackageBuilder(
         sources_dir=sources_dir,
+        templates_dir=templates_dir,
         logger=logger,
         compiler=compiler,
         downloader=downloader_service,
@@ -225,13 +231,9 @@ def clean_workspace_command(sources_dir: Path) -> None:
     logger = Logger(min_terminal_level="info")
     logger.info(f"Cleaning workspace directory: {sources_dir}")
 
-    # FIX: Maintain a synchronized constructor setup layout signature contract
-    dummy_templates_dir = Path("templates") / "debian"
-    compiler = DebianTemplateCompiler(templates_dir=dummy_templates_dir, logger=logger)
-
-    builder = DebianPackageBuilder(
-        sources_dir=sources_dir,
-        logger=logger,
-        compiler=compiler
-    )
-    builder.remove_package_tree()
+    if sources_dir.exists():
+        try:
+            shutil.rmtree(sources_dir)
+            logger.info(f"Successfully removed workspace target tree layout: {sources_dir}")
+        except Exception as error:
+            logger.error(f"Failed to remove directory tree structure: {error}")

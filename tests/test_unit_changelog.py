@@ -10,7 +10,89 @@ from pathlib import Path
 import pytest
 import yaml
 
-from package_generator import Changelog, Logger, ProjectManifest, RepositoryManifest
+from package_generator import (
+    Changelog,
+    DebianTemplateCompiler,
+    Logger,
+    PackageConfig,
+    ProjectConfig,
+    ProjectManifest,
+    RepositoryManifest,
+)
+
+
+@pytest.fixture
+def changelog_sandbox(
+    tmp_path: Path,
+    project_config: str,
+    mock_changelog_template: str,
+) -> tuple[Logger, Path, ProjectConfig]:
+    """Establishes a unified, type-safe sandbox environment for changelog unit tests.
+
+    Automates structural configuration DVO parsing and seeds the required external
+    Jinja2 changelog template layout directly inside a temporary workspace container.
+
+    Returns:
+        A tuple tracking (template_directory_path, package_config_dvo, project_config_dvo).
+    """
+    logger = Logger(min_terminal_level="emergency")
+
+    raw_project = yaml.safe_load(project_config)
+    project = ProjectManifest(raw_data=raw_project, logger=logger).config
+
+    # 2. Automatically establish the required templates layout footprint on disk
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir(parents=True, exist_ok=True)
+
+    changelog_template = template_dir / "changelog.jinja2"
+    changelog_template.write_text(mock_changelog_template, encoding="utf-8")
+
+    return logger, template_dir, project
+
+
+@pytest.fixture
+def config_v1(manifest_v1: str) -> PackageConfig:
+    """Compiles the raw version 1.0.0 manifest string into a type-safe object.
+
+    Args:
+        manifest_v1: A shared test fixture providing the baseline manifest YAML string.
+
+    Returns:
+        A strongly typed PackageConfig domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_manifest = yaml.safe_load(manifest_v1)
+    return RepositoryManifest(raw_data=raw_manifest, logger=logger).config
+
+
+@pytest.fixture
+def config_v2(manifest_v2: str) -> PackageConfig:
+    """Compiles the raw version 1.0.0 manifest string into a type-safe object.
+
+    Args:
+        manifest_v2: A shared test fixture providing the baseline manifest YAML string.
+
+    Returns:
+        A strongly typed PackageConfig domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_manifest = yaml.safe_load(manifest_v2)
+    return RepositoryManifest(raw_data=raw_manifest, logger=logger).config
+
+
+@pytest.fixture
+def config_v3(manifest_v3: str) -> PackageConfig:
+    """Compiles the raw version 1.0.0 manifest string into a type-safe object.
+
+    Args:
+        manifest_v3: A shared test fixture providing the baseline manifest YAML string.
+
+    Returns:
+        A strongly typed PackageConfig domain value object instance.
+    """
+    logger = Logger(min_terminal_level="emergency")
+    raw_manifest = yaml.safe_load(manifest_v3)
+    return RepositoryManifest(raw_data=raw_manifest, logger=logger).config
 
 
 def test_changelog_parses_genesis_release_metadata(changelog_v1: str) -> None:
@@ -19,12 +101,12 @@ def test_changelog_parses_genesis_release_metadata(changelog_v1: str) -> None:
     Args:
         changelog_v1: A test fixture providing a raw initial changelog text string.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    manifest = Changelog(raw_text=changelog_v1, logger=silent_logger)
+    logger = Logger(min_terminal_level="emergency")
+    manifest = Changelog(raw_text=changelog_v1, logger=logger)
 
     assert manifest.latest_entry is not None
 
-    assert manifest.latest_entry.package_name == "test-repo"
+    assert manifest.latest_entry.package_name == "test-repo-repo-config"
     assert manifest.latest_entry.version == "1.0.0"
     assert manifest.latest_entry.suite == "stable"
     assert manifest.latest_entry.urgency == "medium"
@@ -38,8 +120,8 @@ def test_changelog_tracks_multiple_historical_blocks(changelog_v3: str) -> None:
     Args:
         changelog_v3: A test fixture providing a master three-entry changelog text.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    manifest = Changelog(raw_text=changelog_v3, logger=silent_logger)
+    logger = Logger(min_terminal_level="emergency")
+    manifest = Changelog(raw_text=changelog_v3, logger=logger)
 
     assert len(manifest.entries) == 3
     assert manifest.entries[0].version == "1.0.2"
@@ -48,11 +130,11 @@ def test_changelog_tracks_multiple_historical_blocks(changelog_v3: str) -> None:
 
 def test_changelog_handles_empty_or_invalid_text_gracefully() -> None:
     """Verifies that the engine handles unparseable text without crashing."""
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger = Logger(min_terminal_level="emergency")
 
     # Ingest a completely invalid string text layout
     manifest = Changelog(
-        raw_text="This is random junk text, not a changelog.", logger=silent_logger
+        raw_text="This is random junk text, not a changelog.", logger=logger
     )
 
     # Assert that the engine exited safely with an empty list and no latest entry
@@ -60,242 +142,184 @@ def test_changelog_handles_empty_or_invalid_text_gracefully() -> None:
     assert manifest.latest_entry is None
 
 def test_changelog_generates_genesis_release_from_v1_manifest(
-    manifest_v1: str,
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
     changelog_v1: str,
 ) -> None:
     """Verifies that compiling a blank history with manifest v1 outputs changelog v1.
 
     Args:
-        manifest_v1: A test fixture providing the initial repository configuration.
-        project_config: A test fixture providing global project configuration fields.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
+        config_v1: Shared setup fixture providing the initial repository object.
         changelog_v1: The expected initial genesis changelog file text block.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-
-    # Ingest primitive text fixtures into type-safe configuration DVO assets
-    raw_manifest = yaml.safe_load(manifest_v1)
-    config = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger).config
-
-    raw_project = yaml.safe_load(project_config)
-    project_config_dvo = ProjectManifest(raw_data=raw_project, logger=silent_logger).config
-
-    # EXECUTION: Instantiate the tool as a clean slate (blank text string)
-    # and request a new version ledger compilation pass entry block
-    changelog_engine = Changelog(raw_text="", logger=silent_logger)
-
-    # 1. Inside test_changelog_generates_genesis_release_from_v1_manifest:
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+    # Instantiate the engine with a clean slate
+    changelog_engine = Changelog(raw_text="", logger=logger)
+    # Compile changelog entry
     compiled_output = changelog_engine.generate_next_version(
-        config=config,
-        project_config=project_config_dvo,
-        current_time="Mon, 10 Aug 2026 12:00:00 +0000"  # Pass fixed test timestamp
+        config=config_v1,
+        project_config=project,
+        templates_dir=template_dir,
+        current_time="Mon, 10 Aug 2026 12:00:00 +0000"
     )
-
-    # Recreated text must match origin text exactly row-for-row
+    # Check that the final compiled layout matches our target fixture perfectly
     assert compiled_output.strip() == changelog_v1.strip()
 
 
 def test_changelog_appends_delta_changes_from_v2_manifest(
-    manifest_v1: str,
-    manifest_v2: str,
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
+    config_v2: PackageConfig,
     changelog_v2: str,
 ) -> None:
     """Verifies that appending a version bump from manifest v2 outputs changelog v2.
 
     Args:
-        manifest_v1: A test fixture providing the baseline v1 configuration state.
-        manifest_v2: A test fixture providing the bumped v2 configuration state.
-        project_config: A test fixture providing global project configuration fields.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
+        config_v1: Shared setup fixture providing the baseline repository object.
+        config_v2: Shared setup fixture providing the bumped v2 repository object.
         changelog_v2: The expected accumulated history changelog file text block.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-
-    # Set up our baseline historical config and our targeted bumped configuration
-    config_v1 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v1),
-        logger=silent_logger
-    ).config
-    config_v2 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v2),
-        logger=silent_logger
-    ).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config),
-        logger=silent_logger
-    ).config
-
-    # EXECUTION: Ingest the clean v1 changelog history, then request a version bump
-    # to evaluate changes introduced by manifest_v2 dynamically
-    changelog_engine = Changelog(raw_text="", logger=silent_logger)
-
-    # 2. Inside test_changelog_appends_delta_changes_from_v2_manifest:
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+    # Instantiate the changelog engine with a clean slate
+    changelog_engine = Changelog(raw_text="", logger=logger)
+    # Compile changelog entry for config_v1
     history_track = changelog_engine.generate_next_version(
         config=config_v1,
-        project_config=project_config_dvo,
+        project_config=project,
+        templates_dir=template_dir,
         current_time="Mon, 10 Aug 2026 12:00:00 +0000"
     )
-
-    bump_engine = Changelog(raw_text=history_track, logger=silent_logger)
+    # Instantiate the changelog engine with the generated manifest from config_v1
+    bump_engine = Changelog(raw_text=history_track, logger=logger)
+    # Compile changelog entry for config_v2
     compiled_output = bump_engine.generate_next_version(
         config=config_v2,
-        project_config=project_config_dvo,
+        project_config=project,
+        templates_dir=template_dir,
         current_time="Mon, 10 Aug 2026 13:00:00 +0000"  # Pass fixed test timestamp
     )
-
+    # Check that the final compiled layout matches our target fixture perfectly
     assert compiled_output.strip() == changelog_v2.strip()
 
 
 def test_changelog_compiles_cumulative_history_from_v3_manifest(
-    manifest_v1: str,
-    manifest_v2: str,
-    manifest_v3: str,
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
+    config_v2: PackageConfig,
+    config_v3: PackageConfig,
     changelog_v3: str,
 ) -> None:
     """Verifies that appending an array removal from manifest v3 outputs changelog v3.
 
     Args:
-        manifest_v1: A test fixture providing the baseline v1 configuration state.
-        manifest_v2: A test fixture providing the bumped v2 configuration state.
-        manifest_v3: A test fixture providing the final v3 configuration state.
-        project_config: A test fixture providing global project configuration fields.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
+        config_v1: Shared setup fixture providing the baseline repository object.
+        config_v2: Shared setup fixture providing the bumped v2 repository object.
+        config_v3: Shared setup fixture providing the bumped v2 repository object.
         changelog_v3: The expected cumulative final master changelog file text block.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-
-    config_v1 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v1),
-        logger=silent_logger
-    ).config
-    config_v2 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v2),
-        logger=silent_logger
-    ).config
-    config_v3 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v3),
-        logger=silent_logger
-    ).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config),
-        logger=silent_logger
-    ).config
-
-    # Chain generations sequentially to form a continuous three-entry timeline record ledger row
-    changelog_engine = Changelog(raw_text="", logger=silent_logger)
-
-    # 3. Inside test_changelog_compiles_cumulative_history_from_v3_manifest:
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+    # Instantiate the changelog engine with a clean slate
+    changelog_engine = Changelog(raw_text="", logger=logger)
+    # Compile each changelog fixture one after the other
     history_v1 = changelog_engine.generate_next_version(
         config=config_v1,
-        project_config=project_config_dvo,
+        project_config=project,
+        templates_dir=template_dir,
         current_time="Mon, 10 Aug 2026 12:00:00 +0000"
     )
-
-    engine_v2 = Changelog(raw_text=history_v1, logger=silent_logger)
+    engine_v2 = Changelog(raw_text=history_v1, logger=logger)
     history_v2 = engine_v2.generate_next_version(
         config=config_v2,
-        project_config=project_config_dvo,
+        project_config=project,
+        templates_dir=template_dir,
         current_time="Mon, 10 Aug 2026 13:00:00 +0000"
     )
-
-    engine_v3 = Changelog(raw_text=history_v2, logger=silent_logger)
+    engine_v3 = Changelog(raw_text=history_v2, logger=logger)
     compiled_output = engine_v3.generate_next_version(
         config=config_v3,
-        project_config=project_config_dvo,
+        project_config=project,
+        templates_dir=template_dir,
         current_time="Mon, 10 Aug 2026 14:00:00 +0000"  # Pass fixed test timestamp
     )
-
+    # Check that the final compiled layout matches our target fixture perfectly
     assert compiled_output.strip() == changelog_v3.strip()
 
 def test_changelog_can_reconstruct_exact_manifest_v1_file(
-    tmp_path: Path,
-    changelog_v1: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v1: str,
+    changelog_v1: str,
     mock_manifest_template: str,
 ) -> None:
     """Verifies that parsing changelog v1 reproduces manifest v1 exactly via template.
 
     Args:
-        tmp_path: A built-in pytest fixture providing a temporary directory path.
-        changelog_v1: A test fixture providing the initial changelog text string.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         manifest_v1: A test fixture providing the expected target YAML string.
+        changelog_v1: A test fixture providing the initial changelog text string.
         mock_manifest_template: Blueprint layout matching manifest_v1 format.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
-
-    # 1. Reverse-engineer the ledger back into a compiled PackageConfig DVO
-    reconstructed_config = changelog_engine.to_package_config()
-
-    # 2. Write our mock blueprint to a temporary sandbox directory layout path
-    sandbox_dir = tmp_path / "templates_v1"
-    sandbox_dir.mkdir()
-    template_file = sandbox_dir / "manifest_mock"
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+    # Instantiate the changelog engine with the changelog_v1 fixture
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
+    # Reverse-engineer the ledger back into a PackageConfig object
+    rebuilt_config = changelog_engine.to_package_config()
+    # Write our mock manifest template to a temporary directory
+    template_file = template_dir / "manifest.jinja2"
     template_file.write_text(mock_manifest_template, encoding="utf-8")
-
-    # 3. Use our compiler to render the reconstructed DVO back into text layout rows
-    from package_generator.compiler import DebianTemplateCompiler
-    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
-
-    # Pass an empty ProjectConfig since this matching template only requests package attributes
-    from package_generator.models import ProjectConfig
-    dummy_proj = ProjectConfig(
-        maintainer_name="", maintainer_email="", copyright_holder="", repository_url=""
-    )
-
+    # Render the rebuilt manifest file back into text layout rows
+    compiler = DebianTemplateCompiler(templates_dir=template_dir, logger=logger)
     rendered_manifest = compiler.render_template(
-        template_name="manifest_mock",
-        package_config=reconstructed_config,
-        project_config=dummy_proj,
+        template_name="manifest.jinja2",
+        package_config=rebuilt_config,
+        project_config=project,  # Pass the real type-safe config object
     )
-
-    # 4. CLOSED-LOOP INVARIANT ASSERTION: Reconstructed YAML string must match origin exactly
+    # Reconstructed YAML string must match origin exactly
     assert rendered_manifest.strip() == manifest_v1.strip()
 
 
 def test_changelog_can_reconstruct_exact_manifest_v2_file(
-    tmp_path: Path,
-    changelog_v2: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v2: str,
+    changelog_v2: str,
     mock_manifest_template: str,
 ) -> None:
     """Verifies that parsing changelog v2 reproduces manifest v2 exactly via template.
 
     Args:
-        tmp_path: A built-in pytest fixture providing a temporary directory path.
-        changelog_v2: A test fixture providing the v2 delta changelog text string.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         manifest_v2: A test fixture providing the expected target YAML string.
+        changelog_v2: A test fixture providing the changelog text string.
         mock_manifest_template: Blueprint layout matching manifest_v1 format.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v2, logger=silent_logger)
-
-    reconstructed_config = changelog_engine.to_package_config()
-
-    sandbox_dir = tmp_path / "templates_v2"
-    sandbox_dir.mkdir()
-    template_file = sandbox_dir / "manifest_mock"
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+    # Instantiate the changelog engine with the changelog_v1 fixture
+    changelog_engine = Changelog(raw_text=changelog_v2, logger=logger)
+    # Reverse-engineer the ledger back into a PackageConfig object
+    rebuilt_config = changelog_engine.to_package_config()
+    # Write our mock manifest template to a temporary directory
+    template_file = template_dir / "manifest.jinja2"
     template_file.write_text(mock_manifest_template, encoding="utf-8")
-
-    from package_generator.compiler import DebianTemplateCompiler
-    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
-
-    from package_generator.models import ProjectConfig
-    dummy_proj = ProjectConfig(
-        maintainer_name="", maintainer_email="", copyright_holder="", repository_url=""
-    )
-
+    # Render the rebuilt manifest file back into text layout rows
+    compiler = DebianTemplateCompiler(templates_dir=template_dir, logger=logger)
     rendered_manifest = compiler.render_template(
-        template_name="manifest_mock",
-        package_config=reconstructed_config,
-        project_config=dummy_proj,
+        template_name="manifest.jinja2",
+        package_config=rebuilt_config,
+        project_config=project,  # Pass the real type-safe config object
     )
-
+    # Reconstructed YAML string must match origin exactly
     assert rendered_manifest.strip() == manifest_v2.strip()
 
 
 def test_changelog_can_reconstruct_exact_manifest_v3_file(
-    tmp_path: Path,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     changelog_v3: str,
     manifest_v3: str,
     mock_manifest_template: str,
@@ -303,108 +327,94 @@ def test_changelog_can_reconstruct_exact_manifest_v3_file(
     """Verifies that parsing changelog v3 reproduces manifest v3 exactly via template.
 
     Args:
-        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
         changelog_v3: A test fixture providing the cumulative v3 changelog text string.
         manifest_v3: A test fixture providing the expected target YAML string.
         mock_manifest_template: Blueprint layout matching manifest_v1 format.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v3, logger=silent_logger)
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+
+    changelog_engine = Changelog(raw_text=changelog_v3, logger=logger)
 
     reconstructed_config = changelog_engine.to_package_config()
 
-    sandbox_dir = tmp_path / "templates_v3"
-    sandbox_dir.mkdir()
-    template_file = sandbox_dir / "manifest_mock"
+    template_file = template_dir / "manifest.jinja2"
     template_file.write_text(mock_manifest_template, encoding="utf-8")
 
-    from package_generator.compiler import DebianTemplateCompiler
-    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=silent_logger)
-
-    from package_generator.models import ProjectConfig
-    dummy_proj = ProjectConfig(
-        maintainer_name="", maintainer_email="", copyright_holder="", repository_url=""
-    )
+    compiler = DebianTemplateCompiler(templates_dir=template_dir, logger=logger)
 
     rendered_manifest = compiler.render_template(
-        template_name="manifest_mock",
+        template_name="manifest.jinja2",
         package_config=reconstructed_config,
-        project_config=dummy_proj,
+        project_config=project,
     )
 
     assert rendered_manifest.strip() == manifest_v3.strip()
 
 def test_changelog_returns_raw_text_unchanged_if_no_changes_detected(
-    manifest_v1: str,
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
     changelog_v1: str,
 ) -> None:
     """Verifies that the engine returns the existing text if no data fields changed.
 
     Args:
-        manifest_v1: A test fixture providing the baseline configuration state.
-        project_config: A test fixture providing global project configuration fields.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object.
+        config_v1: A test fixture providing the baseline configuration state.
         changelog_v1: A pre-existing changelog file text block.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
 
-    # SETUP: Ingest changelog_v1 as our active history pool
-    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+    # Ingest changelog_v1 as our active history pool
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
 
-    # Process manifest_v1 again (which has an identical version 1.0.0 and same fields)
-    config_v1 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v1), logger=silent_logger
-    ).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config), logger=silent_logger
-    ).config
-
-    # EXECUTION: Attempt to compile a new version entry block
+    # Attempt to compile a new version entry block
     compiled_output = changelog_engine.generate_next_version(
         config=config_v1,
-        project_config=project_config_dvo,
-        current_time="Mon, 10 Aug 2026 12:00:00 +0000"
+        project_config=project,
+        templates_dir=template_dir,
+        current_time="Mon, 10 Aug 2026 12:00:00 +0000",
     )
 
-    # ASSERTION: The output text stream must match changelog_v1 precisely without duplicates
+    # The output text stream must match changelog_v1 precisely without duplicates
     assert compiled_output.strip() == changelog_v1.strip()
 
 
 def test_changelog_raises_value_error_on_version_downgrade(
-    manifest_v1: str,
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
     changelog_v2: str,
 ) -> None:
     """Verifies that attempting a backward version downgrade raises a ValueError.
 
     Args:
-        manifest_v1: A test fixture providing a v1 (version 1.0.0) config state.
-        project_config: A test fixture providing global project configuration fields.
+        changelog_sandbox: Shared setup fixture providing the template directory and project object..
+        config_v1: A test fixture providing the baseline configuration state.
         changelog_v2: Pre-existing history that is already ahead at version 1.0.1.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
 
-    # SETUP: Ingest changelog_v2 history (which has already progressed to version 1.0.1)
-    changelog_engine = Changelog(raw_text=changelog_v2, logger=silent_logger)
-
-    # Feed manifest_v1 (version 1.0.0) which attempts an illegal downgrade track
-    config_v1 = RepositoryManifest(
-        raw_data=yaml.safe_load(manifest_v1), logger=silent_logger
-    ).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config), logger=silent_logger
-    ).config
+    # Ingest changelog_v2 history (which has already progressed to version 1.0.1)
+    changelog_engine = Changelog(raw_text=changelog_v2, logger=logger)
 
     # ASSERTION: The generation loop must raise a ValueError and halt that path immediately
-    with pytest.raises(ValueError, match="Version downgrade rejected"):
+    with pytest.raises(
+        ValueError,
+        match="Version downgrade violation: Proposed version '1.0.0' is sequentially lower "
+            "than latest ledger release '1.0.1'."
+    ):
         changelog_engine.generate_next_version(
             config=config_v1,
-            project_config=project_config_dvo
+            project_config=project,
+            templates_dir=template_dir
         )
 
 def test_changelog_raises_value_error_when_manifest_modified_without_version_bump(
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v2: str,
-    project_config: str,
     changelog_v2: str,
 ) -> None:
     """Raises ValueError when manifest data changes but the version does not.
@@ -413,61 +423,60 @@ def test_changelog_raises_value_error_when_manifest_modified_without_version_bum
     to a manifest without changing the version string identifier.
 
     Args:
+        changelog_sandbox: Shared setup fixture providing the template directory and project object..
         manifest_v2: A test fixture providing a baseline v2 (1.0.1) config state.
-        project_config: A test fixture providing global project configuration fields.
         changelog_v2: Pre-existing history that is already at version 1.0.1.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v2, logger=silent_logger)
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+    changelog_engine = Changelog(raw_text=changelog_v2, logger=logger)
 
-    # SETUP: Load manifest_v2 (1.0.1) but alter a field to simulate a modification
+    # Load manifest_v2 (1.0.1) but alter a field to simulate a modification
     # without changing the version string away from 1.0.1
     raw_manifest_data = yaml.safe_load(manifest_v2)
     raw_manifest_data["description"] = "A brand new modified description text rule."
 
-    config_modified = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config), logger=silent_logger
-    ).config
+    config_modified = RepositoryManifest(raw_data=raw_manifest_data, logger=logger).config
 
     # ASSERTION: The loop must throw an exception to protect against duplicate headers
     with pytest.raises(ValueError, match="Manifest modified without version bump"):
         changelog_engine.generate_next_version(
             config=config_modified,
-            project_config=project_config_dvo
+            project_config=project,
+            templates_dir=template_dir
         )
 
 
 def test_changelog_calculates_modified_os_mapping_property_deltas(
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v1: str,
-    project_config: str,
     changelog_v1: str,
 ) -> None:
     """Verifies that the engine detects and documents altered fields inside os_mappings.
 
     Args:
+        changelog_sandbox: Shared setup fixture providing the template directory and project object..
         manifest_v1: A test fixture providing a baseline configuration state.
-        project_config: A test fixture providing global project configuration fields.
         changelog_v1: An existing history that has progressed forward to v1.0.0.
     """
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
 
-    # SETUP: Alter 'set_codename' for index 0 and bump version to pass downgrade checks
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
+
+    # Alter 'codename' for index pop|linux and bump version to pass downgrade checks
     raw_manifest_data = yaml.safe_load(manifest_v1)
     raw_manifest_data["os_mappings"]["pop|linuxmint"]["codename"] = "noble"
     raw_manifest_data["version"] = "1.0.1"
 
-    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config), logger=silent_logger
-    ).config
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=logger).config
 
     # EXECUTION: Run the dynamic diff generation loop pass
     compiled_output = changelog_engine.generate_next_version(
         config=config_v2,
-        project_config=project_config_dvo,
-        current_time="Mon, 10 Aug 2026 13:00:00 +0000"
+        project_config=project,
+        templates_dir=template_dir,
+        current_time="Mon, 10 Aug 2026 13:00:00 +0000",
     )
 
     # ASSERTION: Engine must compute the internal rule change bullet lines successfully
@@ -476,7 +485,7 @@ def test_changelog_calculates_modified_os_mapping_property_deltas(
 
 def test_changelog_reconstructs_static_keyring_toggle_from_text() -> None:
     """Verifies that the engine extracts static keyring toggles from text."""
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger = Logger(min_terminal_level="emergency")
 
     mock_history = (
         "test-repo (1.0.1) stable; urgency=medium\n\n"
@@ -485,58 +494,60 @@ def test_changelog_reconstructs_static_keyring_toggle_from_text() -> None:
         " -- Alice <alice@example.com>  Mon, 10 Aug 2026 13:00:00 +0000"
     )
 
-    engine = Changelog(raw_text=mock_history, logger=silent_logger)
+    engine = Changelog(raw_text=mock_history, logger=logger)
     config = engine.to_package_config()
     assert config.dynamic_keyring is False
 
 def test_changelog_calculates_modified_os_mapping_distro_property_deltas(
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v1: str,
-    project_config: str,
     changelog_v1: str,
 ) -> None:
     """Verifies that the engine detects altered distro fields in os_mappings."""
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
 
     raw_manifest_data = yaml.safe_load(manifest_v1)
     # Alter distro instead of codename to hit the missing line branch path
     raw_manifest_data["os_mappings"]["pop|linuxmint"]["distro"] = "debian-custom"
     raw_manifest_data["version"] = "1.0.1"
 
-
-    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
-    project_config_dvo = ProjectManifest(
-        raw_data=yaml.safe_load(project_config), logger=silent_logger
-    ).config
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=logger).config
 
     compiled_output = changelog_engine.generate_next_version(
         config=config_v2,
-        project_config=project_config_dvo,
-        current_time="Mon, 10 Aug 2026 13:00:00 +0000"
+        project_config=project,
+        templates_dir=template_dir,
+        current_time="Mon, 10 Aug 2026 13:00:00 +0000",
     )
 
     assert "Modified os_mappings rule matching pop|linuxmint" in compiled_output
     assert "distro=debian-custom" in compiled_output
 
 def test_changelog_isolates_repo_url_and_key_url_deltas_precisely(
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v1: str,
     changelog_v1: str,
 ) -> None:
     """Verifies modifying only repo.url does not falsely claim a key_url delta."""
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
 
     raw_manifest_data = yaml.safe_load(manifest_v1)
     # Modify ONLY the url parameter to match your real-world scenario bug
     raw_manifest_data["repo"]["url"] = "http://packages2.openmediavault.org"
     raw_manifest_data["version"] = "1.0.1"
 
-    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
-    project_dvo = ProjectManifest(raw_data=yaml.safe_load(project_config), logger=silent_logger).config
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=logger).config
 
     compiled_output = changelog_engine.generate_next_version(
-        config=config_v2, project_config=project_dvo
+        config=config_v2,
+        project_config=project,
+        templates_dir=template_dir,
     )
 
     assert "repo.url=" in compiled_output
@@ -545,25 +556,28 @@ def test_changelog_isolates_repo_url_and_key_url_deltas_precisely(
 
 
 def test_changelog_calculates_and_persists_repo_components_and_suites_deltas(
-    project_config: str,
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
     manifest_v1: str,
     changelog_v1: str,
 ) -> None:
     """Verifies that changes to repo components and suites calculate deltas."""
-    silent_logger = Logger(min_terminal_level="emergency")
-    changelog_engine = Changelog(raw_text=changelog_v1, logger=silent_logger)
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
 
     raw_manifest_data = yaml.safe_load(manifest_v1)
     # Modify the parameters to match your real-world OpenMediaVault values
     raw_manifest_data["repo"]["components"] = "stable"
-    raw_manifest_data["repo"]["suites"] = "synchrony1"
+    raw_manifest_data["repo"]["suites"] = "synchrony"
     raw_manifest_data["version"] = "1.0.1"
 
-    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=silent_logger).config
-    project_dvo = ProjectManifest(raw_data=yaml.safe_load(project_config), logger=silent_logger).config
+    config_v2 = RepositoryManifest(raw_data=raw_manifest_data, logger=logger).config
 
     compiled_output = changelog_engine.generate_next_version(
-        config=config_v2, project_config=project_dvo
+        config=config_v2,
+        project_config=project,
+        templates_dir=template_dir,
     )
 
     assert "repo.components=" in compiled_output
@@ -574,22 +588,49 @@ def test_changelog_reverse_parser_successfully_reconstructs_components_and_suite
     changelog_v1: str,
 ) -> None:
     """Verifies that to_package_config reverse-engineers components and suites."""
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger = Logger(min_terminal_level="emergency")
 
-    # Inject explicit components and suites historical bullet metrics into a raw changelog string
-    custom_changelog = (
-        "openmediavault (1.0.0) stable; urgency=medium\n\n"
-        "  * Initial package definition established.\n"
-        "  * repo.url=http://packages.openmediavault.org/public/\n"
-        "  * repo.suites=synchrony1\n"
-        "  * repo.components=stable\n"
-        "  * repo.key_url=https://packages.openmediavault.io/archive.key\n\n"
-        " -- Alice <alice@example.com>  Wed, 12 Aug 2026 06:57:21 -0500\n"
-    )
+    changelog_engine = Changelog(raw_text=changelog_v1, logger=logger)
 
-    changelog_engine = Changelog(raw_text=custom_changelog, logger=silent_logger)
     reconstructed_config = changelog_engine.to_package_config()
 
     # CRITICAL INVARIANT: The reverse-parsed object must capture the nested data
-    assert reconstructed_config.repo.components == "stable"
-    assert reconstructed_config.repo.suites == "synchrony1"
+    assert reconstructed_config.repo.components == "main"
+    assert reconstructed_config.repo.suites == "${TARGET_CODENAME}"
+
+def test_changelog_engine_renders_next_version_using_external_jinja_template(
+    changelog_sandbox: tuple[Logger, Path, ProjectConfig],
+    config_v1: PackageConfig,
+    changelog_v1: str,
+    mock_changelog_template: str,
+) -> None:
+    """Verifies that Changelog uses an external Jinja template to format records.
+
+    Ensures that instead of manual string compilation, the engine uses the
+    provided template layout structure to output the final changelog text.
+
+    Args:
+        changelog_sandbox: Shared setup fixture providing the template directory and project object..
+        config_v1: Shared setup fixture providing the initial repository object.
+        changelog_v1: The expected initial genesis changelog file text block.
+        mock_changelog_template: Blueprint layout matching changelog_v1 format.
+    """
+    # Extract the shared infrastructure assets from fixtures
+    logger, template_dir, project = changelog_sandbox
+
+    changelog_template = template_dir / "changelog.jinja2"
+    changelog_template.write_text(mock_changelog_template, encoding="utf-8")
+
+    # Initialize our changelog slate tracker pre-seeded with our existing history string fixture
+    changelog = Changelog(raw_text=changelog_v1, logger=logger)
+
+    # Pass the custom templates path straight to the generator routine
+    compiled_output = changelog.generate_next_version(
+        config=config_v1,
+        project_config=project,
+        current_time="Mon, 10 Aug 2026 12:00:00 +0000",
+        templates_dir=template_dir,
+    )
+
+    # Verify the template structure applied the suffix and formatted lines perfectly
+    assert compiled_output.strip() == changelog_v1.strip()

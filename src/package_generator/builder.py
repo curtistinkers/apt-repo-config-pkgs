@@ -22,6 +22,7 @@ class DebianPackageBuilder:
     def __init__(
         self,
         sources_dir: Path,
+        templates_dir: Path,
         logger: "Logger",  # Prevent circular import layout paths
         compiler: DebianTemplateCompiler,
         downloader: Downloader | None = None,
@@ -30,14 +31,15 @@ class DebianPackageBuilder:
         """Initializes the package builder service coordinator.
 
         Args:
-            sources_dir: Root workspace directory container path where package
-                source trees are compiled on disk.
+            sources_dir: Directory where package source trees are compiled.
+            templates_dir: Directory where template files are stored.
             logger: An injected PSR-3 compliant diagnostic logging service.
             compiler: An injected template compilation engine service instance.
             downloader: Optional custom network resource downloader engine service.
             gpg_engine: Optional custom cryptographic PPG dearmoring engine service.
         """
         self._sources_dir = sources_dir
+        self._templates_dir = templates_dir
         self._logger = logger
         self._compiler = compiler
         self._downloader = downloader if downloader is not None else Downloader(logger=logger)
@@ -111,14 +113,17 @@ class DebianPackageBuilder:
         """Handles reading, calculating, and saving the dynamic version changelog ledger."""
         changelog_handler = Changelog(raw_text=existing_history_text, logger=self._logger)
 
+        # FIX 2: Pass our clean, type-safe instance path directly
         updated_changelog_content = changelog_handler.generate_next_version(
             config=config,
             project_config=project_config,
+            templates_dir=self._templates_dir,
             current_time=current_time,
         )
 
         with open(changelog_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
             file_stream.write(updated_changelog_content)
+
 
     def _process_signing_key(self, target_debian_dir: Path, config: PackageConfig) -> None:
         """Downloads, checks armor status, and persists the security keyring to disk."""
@@ -168,8 +173,8 @@ class DebianPackageBuilder:
                     "must be handled exclusively by the object-oriented state ledger engine."
                 )
                 raise ValueError(
-                    "A template named 'changelog' was discovered inside your templates directory. "
-                    "Remove this asset to clear the package building gatekeeper."
+                    "A template named 'changelog' was discovered inside your debian package "
+                    "templates directory. You must remove this file to continue."
                 )
 
             self._logger.debug(f"Processing and compiling workspace template line: {template_name}")
@@ -186,14 +191,22 @@ class DebianPackageBuilder:
             with open(output_file_path, "w", encoding="utf-8", newline="\n") as file_stream:
                 file_stream.write(compiled_text_stream)
 
-    def remove_package_tree(self) -> None:
-        """Safely removes the targeted sources directory tree from the filesystem."""
+    def remove_package_tree(self, target_dir: Path | None = None) -> None:
+        """Safely removes a targeted sources directory tree from the filesystem.
+
+        Args:
+            target_dir: Optional explicit Path container to purge. If omitted,
+                defaults to the builder instance's assigned sources directory path.
+        """
+        # Resolve which directory track target to target for the purge pass
+        dir_to_remove = target_dir if target_dir is not None else self._sources_dir
+
         self._logger.debug(
-            f"Initializing complete directory tree purge at path: {self._sources_dir}"
+            f"Initializing complete directory tree purge at path: {dir_to_remove}"
         )
 
-        if self._sources_dir.exists():
-            shutil.rmtree(self._sources_dir)
+        if dir_to_remove.exists():
+            shutil.rmtree(dir_to_remove)
             self._logger.info(
-                f"Successfully removed workspace target tree layout: {self._sources_dir}"
+                f"Successfully removed workspace target tree layout: {dir_to_remove}"
             )

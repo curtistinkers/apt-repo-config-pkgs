@@ -21,7 +21,10 @@ from package_generator import (
 
 
 @pytest.fixture
-def mock_builder_ctx(tmp_path: Path) -> tuple[DebianPackageBuilder, MagicMock, MagicMock, Path]:
+def mock_builder_ctx(
+    tmp_path: Path,
+    mock_changelog_template: str,
+) -> tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path]:
     """Provides a fully mocked builder instance with pre-configured services.
 
     Acts exactly like a PHPUnit setUp() method, isolating network and
@@ -29,39 +32,46 @@ def mock_builder_ctx(tmp_path: Path) -> tuple[DebianPackageBuilder, MagicMock, M
     """
     logger = Logger(min_terminal_level="emergency")
 
-    # Setup mock templates footprint so compiler can run
-    templates_dir = tmp_path / "templates" / "debian"
-    templates_dir.mkdir(parents=True, exist_ok=True)
+    # 1. Establish the clean parent templates root path folder
+    templates_root = tmp_path / "templates"
 
-    (templates_dir / "control").write_text("Package: {{ package_name }}", encoding="utf-8")
-    (templates_dir / "rules").write_text("#!/usr/bin/make", encoding="utf-8")
+    # 2. Setup the isolated subdirectory footprint so the compiler can run
+    templates_debian_dir = templates_root / "debian"
+    templates_debian_dir.mkdir(parents=True, exist_ok=True)
 
-    compiler = DebianTemplateCompiler(templates_dir=templates_dir, logger=logger)
+    # Write out standard configuration file blueprints into the debian folder
+    (templates_debian_dir / "control").write_text("Package: {{ package_name }}", encoding="utf-8")
+    (templates_debian_dir / "rules").write_text("#!/usr/bin/make", encoding="utf-8")
+
+    # FIX: Write changelog.jinja2 directly into the parent root directory container!
+    # This keeps it out of the compiler pool while remaining fully reachable by the builder.
+    (templates_root / "changelog.jinja2").write_text(mock_changelog_template, encoding="utf-8")
+
+    compiler = DebianTemplateCompiler(templates_dir=templates_debian_dir, logger=logger)
     sources_dir = tmp_path / "dpkg-sources"
 
     # Configure our uniform network and crypto mocks
     downloader = MagicMock()
-
-    # We prefix with ASCII headers so default fixture runs go down the dearmor track cleanly
     downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY"
 
     gpg_engine = MagicMock()
     gpg_engine.dearmor.return_value = b"MOCK_BINARY_BYTES"
 
-
+    # Inject dependencies straight into the constructor layout
     builder = DebianPackageBuilder(
         sources_dir=sources_dir,
+        templates_dir=templates_root,  # Points to parent root to catch changelog.jinja2
         logger=logger,
         compiler=compiler,
         downloader=downloader,
         gpg_engine=gpg_engine,
     )
 
-    return builder, downloader, gpg_engine, sources_dir
+    return logger, builder, downloader, gpg_engine, sources_dir
 
 
 def test_builder_build_clean_package_directory_tree(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
     manifest_v1: str,
     project_config: str,
 ) -> None:
@@ -77,8 +87,7 @@ def test_builder_build_clean_package_directory_tree(
         project_config: A test fixture providing a valid raw project YAML string.
     """
     # Extract pre-configured builder and dependencies from our shared setup fixture
-    builder, _, _, sources_dir = mock_builder_ctx
-    logger = Logger(min_terminal_level="emergency")
+    logger, builder, _, _, sources_dir = mock_builder_ctx
 
     raw_manifest_data = yaml.safe_load(manifest_v1)
     manifest = RepositoryManifest(raw_data=raw_manifest_data, logger=logger)
@@ -114,7 +123,7 @@ def test_builder_build_clean_package_directory_tree(
 
 
 def test_builder_successfully_removes_sources_directory_tree(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
 ) -> None:
     """Verifies source tree directory removal.
 
@@ -124,7 +133,7 @@ def test_builder_successfully_removes_sources_directory_tree(
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
     """
-    builder, _, _, sources_dir = mock_builder_ctx
+    _, builder, _, _, sources_dir = mock_builder_ctx
 
     # Create the folder
     sources_dir.mkdir(parents=True, exist_ok=True)
@@ -139,7 +148,7 @@ def test_builder_successfully_removes_sources_directory_tree(
     assert not sources_dir.exists(), "The builder failed to delete the target directory tree."
 
 def test_builder_persists_and_increments_existing_changelog_on_disk(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
     manifest_v2: str,
     project_config: str,
     changelog_v1: str,
@@ -159,8 +168,7 @@ def test_builder_persists_and_increments_existing_changelog_on_disk(
         changelog_v2: The expected cumulative final changelog output text stream.
     """
     # Extract pre-configured builder and workspace from our shared setup fixture
-    builder, _, _, sources_dir = mock_builder_ctx
-    logger = Logger(min_terminal_level="emergency")
+    logger, builder, _, _, sources_dir = mock_builder_ctx
 
     raw_manifest = yaml.safe_load(manifest_v2)
     manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger)
@@ -188,7 +196,7 @@ def test_builder_persists_and_increments_existing_changelog_on_disk(
 
 
 def test_builder_throws_emergency_error_if_changelog_template_exists(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
     tmp_path: Path,  # FIX 1: Request tmp_path directly to get type-safe access
     manifest_v1: str,
     project_config: str,
@@ -201,14 +209,13 @@ def test_builder_throws_emergency_error_if_changelog_template_exists(
         manifest_v1: A test fixture providing a baseline manifest string.
         project_config: A test fixture providing a valid raw project YAML string.
     """
-    builder, _, _, _ = mock_builder_ctx
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger, builder, _, _, _ = mock_builder_ctx
 
     raw_manifest = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger)
 
     raw_project = yaml.safe_load(project_config)
-    project_manifest = ProjectManifest(raw_data=raw_project, logger=silent_logger)
+    project_manifest = ProjectManifest(raw_data=raw_project, logger=logger)
 
     # FIX 2: Locate the templates directory natively using tmp_path coordinates
     sandbox_root = tmp_path / "templates" / "debian"
@@ -221,7 +228,11 @@ def test_builder_throws_emergency_error_if_changelog_template_exists(
     env_instance.list_templates = lambda: ["control", "rules", "changelog"]
 
     # ASSERTION: The builder must raise a ValueError and refuse to compile the tree
-    with pytest.raises(ValueError, match="A template named 'changelog' was discovered"):
+    with pytest.raises(
+        ValueError,
+        match="A template named 'changelog' was discovered inside your debian package templates "
+            "directory. You must remove this file to continue."
+    ):
         builder.create_package_tree(
             config=manifest.config,
             project_config=project_manifest.config,
@@ -229,7 +240,7 @@ def test_builder_throws_emergency_error_if_changelog_template_exists(
 
 
 def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
     manifest_v1: str,
     project_config: str,
 ) -> None:
@@ -238,28 +249,29 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
     Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
         manifest_v1: A test fixture providing a static baseline config manifest string.
+        project_config: A project fixture
     """
     # 1. SETUP: Extract pre-configured components directly from our shared setup fixture
-    builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
-    logger = Logger(min_terminal_level="emergency")
+    logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
 
-    # FIX 1: Do NOT overwrite with MagicMock(). Configure the fixture's mocks directly:
+
+    # Configure the fixture's mocks directly:
     mock_downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nMOCK_ASCII_KEY_CONTENT"
     mock_gpg.dearmor.return_value = b"MOCK_BINARY_DEARMORED_BYTES"
 
     raw_manifest = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger).config
 
-    # Ground the test: verify our v1 fixture has dynamic_keyring set to False
-    assert manifest.config.dynamic_keyring is False
+    # Vrify our v1 fixture has dynamic_keyring set to False
+    assert manifest.dynamic_keyring is False
 
     raw_project = yaml.safe_load(project_config)
-    project_manifest = ProjectManifest(raw_data=raw_project, logger=logger)
+    project_manifest = ProjectManifest(raw_data=raw_project, logger=logger).config
 
     # 3. EXECUTION: Run the folder structure tree compilation pass
     target_debian_dir = builder.create_package_tree(
-        config=manifest.config,
-        project_config=project_manifest.config,
+        config=manifest,
+        project_config=project_manifest,
     )
 
     # 4. DECOUPLED INVARIANT ASSERTIONS: Verify coordination behavior
@@ -281,7 +293,7 @@ def test_builder_uses_downloader_and_gpg_services_when_dynamic_keyring_is_false(
 
 
 def test_builder_invokes_dearmor_when_key_payload_starts_with_ascii_headers(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
     manifest_v1: str,
     project_config: str,
 ) -> None:
@@ -290,18 +302,17 @@ def test_builder_invokes_dearmor_when_key_payload_starts_with_ascii_headers(
     Ensures that when download_bytes returns a stream beginning with ASCII text
     headers, the orchestrator routes it to the cryptographic dearmoring filter.
     """
-    builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
 
     # 1. SETUP: Configure the network downloader mock to return text armor bytes
     mock_downloader.download_bytes.return_value = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nmQEN..."
     mock_gpg.dearmor.return_value = b"MOCK_FILTERED_BINARY_BYTES"
 
     raw_manifest = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger)
     project_manifest = ProjectManifest(
         raw_data=yaml.safe_load(project_config),
-        logger=silent_logger
+        logger=logger
     )
 
     # 2. EXECUTION: Drive the compilation loop pass
@@ -322,7 +333,7 @@ def test_builder_invokes_dearmor_when_key_payload_starts_with_ascii_headers(
 
 
 def test_builder_bypasses_dearmor_when_key_payload_is_already_raw_binary(
-    mock_builder_ctx: tuple[DebianPackageBuilder, MagicMock, MagicMock, Path],
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
     manifest_v1: str,
     project_config: str,
 ) -> None:
@@ -331,18 +342,17 @@ def test_builder_bypasses_dearmor_when_key_payload_is_already_raw_binary(
     Ensures that when download_bytes returns a raw pre-compiled binary stream,
     the orchestrator skips GpgEngine entirely and saves the raw payload bytes.
     """
-    builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
-    silent_logger = Logger(min_terminal_level="emergency")
+    logger, builder, mock_downloader, mock_gpg, _ = mock_builder_ctx
 
     # 1. SETUP: Configure the network downloader mock to return non-armored binary bytes
     mock_raw_binary_payload = b"\x99\x01\x00_RAW_UNARMORED_BINARY_STREAM"
     mock_downloader.download_bytes.return_value = mock_raw_binary_payload
 
     raw_manifest = yaml.safe_load(manifest_v1)
-    manifest = RepositoryManifest(raw_data=raw_manifest, logger=silent_logger)
+    manifest = RepositoryManifest(raw_data=raw_manifest, logger=logger)
     project_manifest = ProjectManifest(
         raw_data=yaml.safe_load(project_config),
-        logger=silent_logger
+        logger=logger
     )
 
     # 2. EXECUTION: Drive the compilation loop pass

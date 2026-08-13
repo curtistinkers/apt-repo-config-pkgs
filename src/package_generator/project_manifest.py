@@ -39,6 +39,7 @@ class ProjectManifest:
             "maintainer_email",
             "copyright_holder",
             "repository_url",
+            "package_suffix",
         ]
 
         collected_errors = []
@@ -70,6 +71,7 @@ class ProjectManifest:
             maintainer_email=str(self._raw_data["maintainer_email"]).strip(),
             copyright_holder=str(self._raw_data["copyright_holder"]).strip(),
             repository_url=str(self._raw_data["repository_url"]).strip(),
+            package_suffix=str(self._raw_data["package_suffix"]).strip(),
         )
 
         self._logger.info("Successfully validated and compiled global project manifest.")

@@ -26,6 +26,7 @@ def project_config() -> str:
 maintainer_email: alice@example.com
 copyright_holder: Alice
 repository_url: https://git.example.com/alice/deb-repo-config-packages
+package_suffix: -repo-config
 """
 
 @pytest.fixture
@@ -57,12 +58,12 @@ repo:
   components: main
   key_url: https://example.com/signing.gpg
 os_mappings:
-  pop|linuxmint:
-    distro: ubuntu
-    codename: ${UBUNTU_CODENAME}
   raspbian:
     distro: debian
     codename: ${VERSION_CODENAME}
+  pop|linuxmint:
+    distro: ubuntu
+    codename: ${UBUNTU_CODENAME}
 """
 
 
@@ -73,7 +74,7 @@ def changelog_v1() -> str:
     Returns:
         str: A multiline string representing a changelog.
     """
-    return """test-repo (1.0.0) stable; urgency=medium
+    return """test-repo-repo-config (1.0.0) stable; urgency=medium
 
   * Initial package definition established.
   * description=Test repository package layout configuration.
@@ -83,10 +84,10 @@ def changelog_v1() -> str:
   * repo.suites=${TARGET_CODENAME}
   * repo.components=main
   * repo.key_url=https://example.com/signing.gpg
-  * os_mappings.pop|linuxmint.distro=ubuntu
-  * os_mappings.pop|linuxmint.codename=${UBUNTU_CODENAME}
   * os_mappings.raspbian.distro=debian
   * os_mappings.raspbian.codename=${VERSION_CODENAME}
+  * os_mappings.pop|linuxmint.distro=ubuntu
+  * os_mappings.pop|linuxmint.codename=${UBUNTU_CODENAME}
 
  -- Alice <alice@example.com>  Mon, 10 Aug 2026 12:00:00 +0000
 """
@@ -114,12 +115,12 @@ repo:
   components: main
   key_url: https://v2.example.com/signing.gpg
 os_mappings:
-  pop|linuxmint:
-    distro: ubuntu
-    codename: ${UBUNTU_CODENAME}
   raspbian:
     distro: debian
     codename: ${VERSION_CODENAME}
+  pop|linuxmint:
+    distro: ubuntu
+    codename: ${UBUNTU_CODENAME}
 """
 
 
@@ -137,7 +138,7 @@ def changelog_v2(changelog_v1: str) -> str:
     Returns:
         str: A multi-block changelog string tracking versions 1.0.1 and 1.0.0.
     """
-    return f"""test-repo (1.0.1) stable; urgency=medium
+    return f"""test-repo-repo-config (1.0.1) stable; urgency=medium
 
   * Updated version to 1.0.1
   * Modified description: Altered test repository package layout configuration.
@@ -190,7 +191,7 @@ def changelog_v3(changelog_v2: str) -> str:
     Returns:
         A multi-block changelog string tracking versions 1.0.2, 1.0.1, and 1.0.0.
     """
-    return f"""test-repo (1.0.2) stable; urgency=medium
+    return f"""test-repo-repo-config (1.0.2) stable; urgency=medium
 
   * Updated version to 1.0.2
   * Toggled repository keyring strategy to: dynamic
@@ -284,6 +285,7 @@ def mock_project_config_template() -> str:
 maintainer_email: {{ maintainer_email}}
 copyright_holder: {{ copyright_holder }}
 repository_url: {{ repository_url }}
+package_suffix: {{ package_suffix }}
 
 """
 
@@ -311,4 +313,16 @@ os_mappings:
     codename: {{ mapping.codename }}
 {%- endfor %}
 
+"""
+
+@pytest.fixture
+def mock_changelog_template() -> str:
+    """Mock changelog template."""
+    return """{{ package_name }}{{ package_suffix }} ({{ version }}) stable; urgency=medium
+
+{% for change in changelog_bullets %}
+  * {{ change }}
+{% endfor %}
+
+ -- {{ maintainer_name }} <{{ maintainer_email }}>  {{ current_date }}
 """

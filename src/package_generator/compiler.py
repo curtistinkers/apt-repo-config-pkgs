@@ -91,6 +91,7 @@ class DebianTemplateCompiler:
             "maintainer_email": project_config.maintainer_email,
             "copyright_holder": project_config.copyright_holder,
             "repository_url": project_config.repository_url,
+            "package_suffix": project_config.package_suffix,
 
             "os_normalization_rules": os_normalization_rules_str,
         }
