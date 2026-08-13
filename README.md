@@ -1,6 +1,6 @@
-# Repository Configuration Package Generator
+# `apt` Repository Configuration Package Generator
 
-This project reads YAML files that describe a Apt package repository and turns
+This project reads YAML files that describe a `apt` package repository and turns
 them into installable Debian (`.deb`) packages. You can use it to automatically
 generate repository configuration files and signing keyrings.
 
