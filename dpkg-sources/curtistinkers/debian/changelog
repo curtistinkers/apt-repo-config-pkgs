@@ -1,3 +1,10 @@
+curtistinkers-repo-config (1.0.1) stable; urgency=medium
+
+  * Updated version to 1.0.1
+  * Modified repo.url: http://apt.curtistinkers.com
+
+ -- curtistinkers <curtistinkers@gmail.com>  Thu, 13 Aug 2026 05:36:30 -0500
+
 curtistinkers-repo-config (1.0.0) stable; urgency=medium
 
   * Initial package definition established.

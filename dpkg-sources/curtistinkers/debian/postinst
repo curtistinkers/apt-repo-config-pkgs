@@ -76,7 +76,7 @@ generate_sources_file() {
 
     # Process template values passed down by the Python builder engine.
     # We substitute runtime ${DIST} and ${CODENAME} values securely via shell expansion.
-    RAW_URI="https://apt.curtistinkers.com"
+    RAW_URI="http://apt.curtistinkers.com"
     RAW_SUITE="${TARGET_CODENAME}"
     RAW_COMPONENTS="main non-free"
 

@@ -1,11 +1,11 @@
 name: curtistinkers
+version: 1.0.1
 description: My private repository.
-version: 1.0.0
 copyright_year: 2026
 dynamic_keyring: false
 
 repo:
-  url: https://apt.curtistinkers.com
+  url: http://apt.curtistinkers.com
   suites: ${TARGET_CODENAME}
   components: main non-free
   key_url: https://apt.curtistinkers.com/curtistinkers-archive-keyring.gpg
