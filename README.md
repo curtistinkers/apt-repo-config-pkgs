@@ -147,9 +147,15 @@ pip install -e .[dev]
 
 The tool uses a command line interface named `generate.py`.
 
-### Build Packages
+### Build Packages Source Files
 
 To read the configuration files and create the Debian source directories, run:
+
+```bash
+python generate.py build
+```
+
+If you want to use different paths from the defauls, you can use the following options:
 
 ```bash
 python generate.py build \
@@ -158,6 +164,36 @@ python generate.py build \
    --templates-dir templates \
    --sources-dir dpkg-sources
 ```
+
+#### Target a Specific Package Manifest
+
+By default, the build command processes every single valid YAML file discovered
+inside the manifests directory tracking track. To isolate execution and compile
+a single package, use the `--package` option flag:
+
+```bash
+python generate.py build --package curtistinkers
+```
+
+The system will match the supplied string argument directly against the `name`
+field inside the manifests and safely skip all other non-matching files.
+
+#### Skip Keyring Downloads
+
+When working offline or testing structural layout rendering steps, network
+download operations for static security keyrings can be bypassed entirely using
+the `--no-download-keys` option flag:
+
+```bash
+python generate.py build build --no-download-keys
+```
+
+Enabling this flag intercepts execution right before the network request layer
+fires. It skips the GPG dearmor filters and drops straight into the
+configuration file template compilation phase, preventing unnecessary downloads
+and speeding up local test iterations.
+
+#### Flags
 
 Options you can add to the build command:
 

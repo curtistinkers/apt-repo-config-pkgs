@@ -355,9 +355,9 @@ def test_builder_process_signing_key_returns_early_when_keyring_is_dynamic(
 ) -> None:
     """Verifies that _process_signing_key exits immediately when dynamic_keyring is True.
 
-    Arg
+    Args:
         mock_builder_ctx: A shared setup fixture providing a mocked builder context.
-        config_v3: TODO
+        config_v3: A test fixture providing package configuration with dynamic keyring enabled.
     """
     _, builder, downloader, gpg_engine, sources_dir = mock_builder_ctx
 
@@ -371,5 +371,32 @@ def test_builder_process_signing_key_returns_early_when_keyring_is_dynamic(
     builder._process_signing_key(target_debian_dir=target_debian_dir, config=config_v3)
 
     # Network and GPG layers must never be touched or called
+    downloader.download_bytes.assert_not_called()
+    gpg_engine.dearmor.assert_not_called()
+
+
+def test_builder_skips_keyring_download_when_no_download_keys_is_true(
+    mock_builder_ctx: tuple[Logger, DebianPackageBuilder, MagicMock, MagicMock, Path],
+    config_v1: PackageConfig,
+) -> None:
+    """Verifies that _process_signing_key returns early when no_download_keys is enabled.
+
+    Args:
+        mock_builder_ctx: A shared setup fixture providing a mocked builder context.
+        config_v1: A test fixture providing a baseline static keyring package configuration.
+    """
+    _, builder, downloader, gpg_engine, sources_dir = mock_builder_ctx
+
+    debian_pkg_dir = sources_dir / "test-repo" / "debian"
+    debian_pkg_dir.mkdir(parents=True, exist_ok=True)
+
+    # Execute the key processing method directly with the skip flag activated
+    builder._process_signing_key(
+        target_debian_dir=debian_pkg_dir,
+        config=config_v1,
+        no_download_keys=True
+    )
+
+    # Verify that the downstream network downloader and gpg filters were completely bypassed
     downloader.download_bytes.assert_not_called()
     gpg_engine.dearmor.assert_not_called()

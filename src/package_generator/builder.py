@@ -50,6 +50,7 @@ class DebianPackageBuilder:
         config: PackageConfig,
         project_config: ProjectConfig,
         current_time: str | None = None,
+        no_download_keys: bool = False,
     ) -> Path:
         """Creates a clean source tree and compiles all available Debian layout files.
 
@@ -58,6 +59,7 @@ class DebianPackageBuilder:
             project_config: Validated, strongly typed global project parameters.
             current_time: An optional RFC-2822 string override used strictly to lock
                 down deterministic test outcomes. Defaults to None (uses system time).
+            no_download_keys: Indicates whether the package builder should download signing keys.
 
         Returns:
             The resolved physical Path object targeting the package's internal
@@ -91,6 +93,7 @@ class DebianPackageBuilder:
         self._process_signing_key(
             target_debian_dir=target_debian_dir,
             config=config,
+            no_download_keys=no_download_keys,
         )
 
         self._compile_templates(
@@ -137,9 +140,22 @@ class DebianPackageBuilder:
             file_stream.write(updated_changelog_content)
 
 
-    def _process_signing_key(self, target_debian_dir: Path, config: PackageConfig) -> None:
+    def _process_signing_key(
+        self,
+        target_debian_dir: Path,
+        config: PackageConfig,
+        no_download_keys: bool = False,
+    ) -> None:
         """Downloads, checks armor status, and persists the security keyring to disk."""
         if config.dynamic_keyring:
+            self._logger.notice(
+                f"Dynamic keyring is set to true, not downloading signing key for: '{config.name}'"
+            )
+            return
+
+        # If true, log a notice alert and skip network operations immediately!
+        if no_download_keys:
+            self._logger.warning(f"Skipping keyring download for package: '{config.name}'")
             return
 
         self._logger.info(

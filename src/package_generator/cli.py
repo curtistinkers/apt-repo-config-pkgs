@@ -56,6 +56,18 @@ def main_cli() -> None:
     help="Target directory where package source layouts will be constructed."
 )
 @click.option(
+    "--package",
+    type=str,
+    default=None,
+    help="Targets a single specific package manifest name to build, skipping all others."
+)
+@click.option(
+    "--no-download-keys",
+    is_flag=True,
+    default=False,
+    help="Skips the network download and dearmor phase for static keyrings entirely."
+)
+@click.option(
     "--debug",
     is_flag=True,
     default=False,
@@ -77,6 +89,8 @@ def build_packages_command(
     sources_dir: Path,
     debug: bool,
     bump_version: bool,
+    no_download_keys: bool,
+    package: str | None,
 ) -> None:
     """Scans your manifests directory and orchestrates Debian package folders.
 
@@ -89,18 +103,14 @@ def build_packages_command(
     version parameter flag to accept the update seamlessly.
 
     Args:
-        project_config: Resolved physical filesystem Path targeting the global
-            project.yaml maintainer parameter workspace.
-        manifests_dir: Resolved physical filesystem Path targeting the folder
-            container where repository manifest YAML files are stored.
-        templates_dir: Resolved physical filesystem Path targeting the root
-            directory where core raw debian template blocks reside.
-        sources_dir: Resolved physical filesystem Path targeting the output
-            workspace folder where source code trees are built.
-        debug: Boolean option flag used to increase logging detail verbosity
-            and toggle downstream execution diagnostic traces.
-        bump_version: Boolean option flag used to auto-accept version changes
-            and automatically increment modified manifest file versions.
+        project_config: The global `config.yaml` package parameter file.
+        manifests_dir: the directory where repository manifest YAML files are stored.
+        templates_dir: The directory where template blocks reside.
+        sources_dir: The output folder where source code trees are built.
+        debug: ncrease logging detail and toggle downstream diagnostic traces.
+        bump_version:Auto-accept version changes and increment manifest file versions.
+        no_download_keys: Indicates whether the package builder should download signing keys.
+        package: Name of the specific package to build.
 
     Raises:
         ValueError: If a fatal architecture violation occurs, such as a static
@@ -134,7 +144,9 @@ def build_packages_command(
         project_config=proj_manifest,
         builder=builder,
         bump_version=bump_version,
-        logger=logger
+        logger=logger,
+        no_download_keys=no_download_keys,
+        target_package=package
     )
 
 
@@ -155,6 +167,8 @@ def _orchestrate_manifest_build_loop(
     builder: DebianPackageBuilder,
     bump_version: bool,
     logger: Logger,
+    no_download_keys: bool,
+    target_package: str | None,
 ) -> None:
     """Iterates chronologically through directory contents to build manifest records."""
     processed_count = 0
@@ -168,13 +182,23 @@ def _orchestrate_manifest_build_loop(
                     raw_yaml_data = yaml.safe_load(file_stream)
 
                 manifest = RepositoryManifest(raw_data=raw_yaml_data, logger=logger)
+
+                # If a target package was requested, skip any file that doesn't match its name!
+                if target_package is not None and manifest.config.name != target_package:
+                    logger.debug(
+                        f"Skipping package '{manifest.config.name}' (targeting '{target_package}')."
+                    )
+                    continue
+
+                logger.debug(f"Loading file stream: {item.name}")
                 compiled_successfully = False
 
                 while not compiled_successfully:
                     try:
                         builder.create_package_tree(
                             config=manifest.config,
-                            project_config=project_config.config
+                            project_config=project_config.config,
+                            no_download_keys=no_download_keys
                         )
                         processed_count += 1
                         compiled_successfully = True

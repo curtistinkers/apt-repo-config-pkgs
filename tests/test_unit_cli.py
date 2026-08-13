@@ -429,3 +429,50 @@ def test_cli_build_performs_auto_bump_when_user_accepts_prompt(
     # Confirm that the file stream on the disk platter was physically modified to v1.0.1
     updated_manifest_text = manifest_file.read_text(encoding="utf-8")
     assert "version: 1.0.1" in updated_manifest_text
+
+
+def test_cli_build_filters_by_specific_package_name(
+    tmp_path: Path,
+    project_config: str,
+    manifest_v1: str,
+) -> None:
+    """Verifies that the build command only processes the manifest matching the package flag.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        project_config: A test fixture providing raw project YAML text.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+    """
+    runner = CliRunner()
+
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(project_config, encoding="utf-8")
+
+    manifests_dir = tmp_path / "manifests"
+    manifests_dir.mkdir()
+
+    # Write the target manifest (name is 'test-repo')
+    (manifests_dir / "target.yaml").write_text(manifest_v1, encoding="utf-8")
+
+    # Write a second manifest with a different name that should be skipped
+    skipped_manifest = manifest_v1.replace("name: test-repo", "name: skipped-repo")
+    (manifests_dir / "skipped.yaml").write_text(skipped_manifest, encoding="utf-8")
+
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    (templates_dir / "debian").mkdir()
+    sources_dir = tmp_path / "dpkg-sources"
+
+    with patch("package_generator.cli.DebianPackageBuilder.create_package_tree") as mock_tree:
+        result = runner.invoke(main_cli, [
+            "build",
+            "--project-config", str(config_file),
+            "--manifests-dir", str(manifests_dir),
+            "--templates-dir", str(templates_dir),
+            "--sources-dir", str(sources_dir),
+            "--package", "test-repo"
+        ])
+
+    assert result.exit_code == 0
+    # Verify that the builder tree creation was called exactly once (only for the targeted package)
+    assert mock_tree.call_count == 1
