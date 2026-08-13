@@ -1,4 +1,5 @@
-maintainer_name: "curtistinkers"
-maintainer_email: "curtistinkers@gmail.com"
-copyright_holder: "curtistinkers"
+maintainer_name: curtistinkers
+maintainer_email: curtistinkers@gmail.com
+copyright_holder: curtistinkers
 repository_url: https://github.com/curtistinkers/deb-repo-config-packages
+package_suffix: -repo-config
