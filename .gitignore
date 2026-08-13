@@ -1,10 +1,12 @@
-# Python files
+# Python environment files
 **/__pycache__
 .pytest_cache/
 .venv/
 **/.coverage
 .ruff_cache/
+htmlcov/
 
+# Helper files for debuild
 dpkg-sources/*/debian/**debhelper*
 dpkg-sources/*/debian/*-repo-config*
 dpkg-sources/*/debian/files
