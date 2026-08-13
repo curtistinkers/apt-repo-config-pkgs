@@ -8,6 +8,7 @@ services:
       # Mount your host directories straight into the container environment workspace
       - ./dpkg-sources:/workspace/dpkg-sources
       - ./dist:/workspace/dist
-    # environment:
+    environment:
+      -  MAX_JOBS=4
       # Optional: Pass flag variables down to suppress lintian or signing warnings if needed
       # - DEB_BUILD_OPTIONS=nocheck

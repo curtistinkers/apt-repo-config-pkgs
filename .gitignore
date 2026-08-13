@@ -11,4 +11,5 @@ dpkg-sources/*
 dpkg-sources/*/debian/**debhelper*
 dpkg-sources/*/debian/*-repo-config*
 dpkg-sources/*/debian/files
+dpkg-sources/*/*_build.log
 !dpkg-sources/*/
