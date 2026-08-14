@@ -1,0 +1,13 @@
+virtualbox-repo-config (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=Configures the official VirtualBox repository.
+  * copyright_year=2026
+  * dynamic_keyring=false
+  * repo.url=https://download.virtualbox.org/virtualbox/debian
+  * repo.suites=${TARGET_CODENAME}
+  * repo.components=contrib
+  * repo.key_url=https://www.virtualbox.org/download/oracle_vbox_2016.asc
+  * repo.key_fingerprint=B9F8 D658 297A F3EF C18D  5CDF A2F6 83C5 2980 AECF
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 05:01:27 -0500
