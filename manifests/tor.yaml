@@ -1,0 +1,13 @@
+name: tor
+version: 1.0.0
+description: Configures the official Tor Project repository.
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: https://deb.torproject.org/torproject.org/
+  suites: ${TARGET_CODENAME}
+  components: main
+  key_url: https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc
+  key_fingerprint: A3C4 F0F9 79CA A22C DBA8 F512 EE8C BC9E 886D DD89
+
