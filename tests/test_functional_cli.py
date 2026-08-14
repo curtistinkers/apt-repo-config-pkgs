@@ -392,11 +392,11 @@ def test_cli_builds_os_normalization_rules(
 
     # Assert that the exact case blocks we expect from manifest_v1 are present
     assert "pop|linuxmint)" in postinst_content
-    assert 'TARGET_DIST="ubuntu"' in postinst_content
+    assert 'TARGET_DISTRO="ubuntu"' in postinst_content
     assert 'TARGET_CODENAME="${UBUNTU_CODENAME}"' in postinst_content
 
     assert "raspbian)" in postinst_content
-    assert 'TARGET_DIST="debian"' in postinst_content
+    assert 'TARGET_DISTRO="debian"' in postinst_content
     assert 'TARGET_CODENAME="${VERSION_CODENAME}"' in postinst_content
 
 
