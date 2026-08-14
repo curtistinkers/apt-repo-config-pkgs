@@ -1,0 +1,12 @@
+github-cli-repo-config (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=Configures the official apt repository for GitHub CLI
+  * copyright_year=2026
+  * dynamic_keyring=false
+  * repo.url=http://cli.github.com/packages/
+  * repo.suites=stable
+  * repo.components=main
+  * repo.key_url=https://cli.github.com/packages/githubcli-archive-keyring.gpg
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 02:45:20 -0500

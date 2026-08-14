@@ -1,0 +1,13 @@
+Source: github-cli-repo-config
+Section: utils
+Priority: optional
+Maintainer: curtistinkers <curtistinkers@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+
+Package: github-cli-repo-config
+Architecture: all
+Depends: ${misc:Depends}
+Description: Configures the official apt repository for GitHub CLI
+ This package automatically manages the APT repository configuration and
+ secure cryptographic keyrings for github-cli.
