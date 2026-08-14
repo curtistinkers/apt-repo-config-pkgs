@@ -9,6 +9,6 @@ services:
       - ./dpkg-sources:/workspace/dpkg-sources
       - ./dist:/workspace/dist
     environment:
-      -  MAX_JOBS=4
+      -  MAX_JOBS=${MAX_JOBS:-4}
       # Optional: Pass flag variables down to suppress lintian or signing warnings if needed
       # - DEB_BUILD_OPTIONS=nocheck
