@@ -94,33 +94,65 @@ class Logger:
     # ==============================================================================
 
     def debug(self, message: str) -> None:
-        """Logs low-level developer background context data blocks."""
+        """Logs low-level developer background context data blocks.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.DEBUG, message, "cyan", use_stderr=False)
 
     def info(self, message: str) -> None:
-        """Logs general informational workspace execution events confirmation."""
+        """Logs general informational workspace execution events confirmation.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.INFO, message, "green", use_stderr=False)
 
     def notice(self, message: str) -> None:
-        """Logs normal but highly significant operational system event gates."""
+        """Logs normal but highly significant operational system event gates.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.NOTICE, message, "blue", use_stderr=False)
 
     def warning(self, message: str) -> None:
-        """Logs non-fatal anomalies or fallback paths configuration alerts."""
+        """Logs non-fatal anomalies or fallback paths configuration alerts.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.WARNING, message, "yellow", use_stderr=False)
 
     def error(self, message: str) -> None:
-        """Logs severe execution bugs or standard template compilation faults."""
+        """Logs severe execution bugs or standard template compilation faults.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.ERROR, message, "red", use_stderr=True)
 
     def critical(self, message: str) -> None:
-        """Logs extreme operational breakdowns or core tracking connection losses."""
+        """Logs extreme operational breakdowns or core tracking connection losses.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.CRITICAL, message, "red", use_stderr=True)
 
     def alert(self, message: str) -> None:
-        """Logs urgent situations demanding immediate code workspace intervention."""
+        """Logs urgent situations demanding immediate code workspace intervention.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.ALERT, message, "magenta", use_stderr=True)
 
     def emergency(self, message: str) -> None:
-        """Logs a completely broken workspace state rendering components unusable."""
+        """Logs a completely broken workspace state rendering components unusable.
+
+        Arg:
+            message: The message string to log.
+        """
         self._log_message(LogLevel.EMERGENCY, message, "red", use_stderr=True)
