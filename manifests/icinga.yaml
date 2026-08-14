@@ -1,0 +1,13 @@
+name: icinga
+version: 1.0.0
+description: Configures the official Icinga repository.
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: https://packages.icinga.com/debian/
+  suites: ${TARGET_CODENAME}
+  components: main
+  key_url: https://packages.icinga.com/icinga.key
+  key_fingerprint: DD3A F619 8ED0 00B4 C0B7 3956 CC11 6F55 AA7F 2382
+
