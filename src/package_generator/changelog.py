@@ -202,6 +202,23 @@ class Changelog:
             key_val = entry.changes.split("Modified repo.key_fingerprint:", 1)[1].splitlines()
             history_map["repo.key_fingerprint"] = key_val[0].strip()
 
+        # Parse added or updated suite aliases from historical text blobs
+        if "Modified suite_alias." in entry.changes:
+            # Split the string array by our keyword prefix block
+            alias_segments = entry.changes.split("Modified suite_alias.")[1:]
+            for segment in alias_segments:
+                first_line = segment.splitlines()[0]
+                if ":" in first_line:
+                    codename, alias_val = first_line.split(":", 1)
+                    history_map[f"suite_alias.{codename.strip()}"] = alias_val.strip()
+
+        # Detect and extract any removed alias keys using a safe regular expression pattern
+        removed_alias_match = re.search(r"Removed suite_alias\.([^\s\n\.]+)", entry.changes)
+        if removed_alias_match:
+            matched_codename = removed_alias_match.group(1).strip()
+            # Mark the historical key as explicitly deleted so the diff loop tracks it
+            history_map[f"suite_alias.{matched_codename}"] = "__DELETED__"
+
         pruned_match = re.search(r"Removed os_mappings\.([^\s\n\.]+)\.", entry.changes)
         if pruned_match:
             matched_flavor = pruned_match.group(1).strip()
@@ -252,6 +269,10 @@ class Changelog:
             bullet_lines.append(f"  * os_mappings.{match_key}.distro={mapping.distro}")
             bullet_lines.append(f"  * os_mappings.{match_key}.codename={mapping.codename}")
 
+        if config.suite_aliases:
+            for codename, vendor_suite in config.suite_aliases.items():
+                bullet_lines.append(f"  * suite_alias.{codename}={vendor_suite}")
+
         return bullet_lines
 
 
@@ -280,8 +301,9 @@ class Changelog:
             bullet_lines, history_map, historical_matches, config
         )
         self._check_os_mapping_pruning(bullet_lines, historical_matches, config)
+        self._check_suite_alias_changes(bullet_lines, history_map, config)
 
-        # FIX 2: Only inject the version upgrade header bullet if field mutations were discovered!
+        # Only inject the version upgrade header bullet if field mutations were discovered!
         if bullet_lines:
             self._logger.info(
                 f"Calculating delta differences for version upgrade: "
@@ -374,6 +396,38 @@ class Changelog:
             if old_match not in current_matches:
                 self._logger.debug(f"Change detected: OS mapping rule flavor '{old_match}' pruned.")
                 bullet_lines.append(f"  * Removed os_mappings.{old_match}.")
+
+    def _check_suite_alias_changes(
+        self, bullet_lines: list[str], history_map: dict[str, str], config: PackageConfig
+    ) -> None:
+        """Compares incoming suite aliases against the historical map to log modifications."""
+        if not config.suite_aliases:
+            return
+
+        # 1. Check for modified or newly added alias keys
+        for codename, vendor_suite in config.suite_aliases.items():
+            history_key = f"suite_alias.{codename}"
+
+            if history_key not in history_map:
+                self._logger.debug(
+                    f"Change detected: Added new suite alias mapping for '{codename}'."
+                )
+                bullet_lines.append(f"  * Modified suite_alias.{codename}: {vendor_suite}")
+            elif history_map[history_key] != vendor_suite:
+                self._logger.debug(
+                    f"Change detected: Updated suite alias mapping for '{codename}'."
+                )
+                bullet_lines.append(f"  * Modified suite_alias.{codename}: {vendor_suite}")
+
+        # 2. Check for removed alias keys
+        for history_key in history_map.keys():
+            if history_key.startswith("suite_alias."):
+                codename = history_key.split(".", 1)[1]
+                if codename not in config.suite_aliases:
+                    self._logger.debug(
+                        f"Change detected: Removed suite alias mapping for '{codename}'."
+                    )
+                    bullet_lines.append(f"  * Removed suite_alias.{codename}")
 
 
     def to_package_config(self) -> PackageConfig:
@@ -488,17 +542,6 @@ class Changelog:
 
         # Turn the soft check into a mandatory, non-negotiable architectural gate rail
         target_template = templates_dir / "changelog.jinja2"
-
-        # try:
-        # if not target_template.exists():
-        #     err_msg = (
-        #         f"Fatal architecture breach: Required layout file 'changelog.jinja2' "
-        #         f"is missing from specified directory track: {templates_dir}"
-        #     )
-                # raise FileNotFoundError(err_msg)
-        # except FileNotFoundError as missing_file_error:
-            # self._logger.emergency(str(missing_file_error))
-            # raise missing_file_error
 
         # Once validated, proceed directly with compile and render operations
         self._logger.info("Initializing external changelog layout compilation pass...")

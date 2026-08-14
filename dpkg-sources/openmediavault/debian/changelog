@@ -16,5 +16,7 @@ openmediavault-repo-config (1.0.0) stable; urgency=medium
   * repo.components=main
   * repo.key_url=https://packages.openmediavault.io/archive.key
   * repo.key_fingerprint=None
+  * suite_alias.bookworm=sandworm
+  * suite_alias.trixie=synchrony
 
  -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 00:28:46 -0500
