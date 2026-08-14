@@ -1,5 +1,5 @@
 name: log2ram
-version: 1.0.1
+version: 1.0.0
 description: Automatically configures the log2ram repository.
 copyright_year: 2026
 dynamic_keyring: false
