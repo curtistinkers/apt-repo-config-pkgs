@@ -1,10 +1,3 @@
-docker-repo-config (1.0.4) stable; urgency=medium
-
-  * Updated version to 1.0.4
-  * Modified repo.key_fingerprint: 9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88
-
- -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 03:32:11 -0500
-
 docker-repo-config (1.0.3) stable; urgency=medium
 
   * Updated version to 1.0.3
@@ -37,7 +30,7 @@ docker-repo-config (1.0.0) stable; urgency=medium
   * repo.suites=${TARGET_CODENAME}
   * repo.components=stable
   * repo.key_url=https://download.docker.com/linux/${TARGET_DIST}/gpg
-  * repo.key_fingerprint=None
+  * repo.key_fingerprint=9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88
   * os_mappings.pop|linuxmint|elementary.distro=ubuntu
   * os_mappings.pop|linuxmint|elementary.codename=${UBUNTU_CODENAME}
 
