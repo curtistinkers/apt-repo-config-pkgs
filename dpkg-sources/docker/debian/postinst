@@ -39,7 +39,7 @@ normalize_os_environment() {
     # shellcheck enable=all
 
     # Default fallback values assignment
-    TARGET_DIST="${ID}"
+    TARGET_DISTRO="${ID}"
     TARGET_CODENAME="${VERSION_CODENAME}"
 
     log_debug "Raw system detected - ID: ${ID}, CODENAME: ${VERSION_CODENAME}"
@@ -51,7 +51,7 @@ normalize_os_environment() {
 
     case "${ID}" in
         pop|linuxmint|elementary)
-            TARGET_DIST="ubuntu"
+            TARGET_DISTRO="ubuntu"
             TARGET_CODENAME="${UBUNTU_CODENAME}"
             ;;
         *)
@@ -59,7 +59,9 @@ normalize_os_environment() {
             ;;
     esac
 
-    log_debug "Normalized runtime targets - DIST: ${TARGET_DIST}, CODENAME: ${TARGET_CODENAME}"
+
+
+    log_debug "Normalized runtime targets - DIST: ${TARGET_DISTRO}, CODENAME: ${TARGET_CODENAME}"
 }
 
 # -----------------------------------------------------------------------------
@@ -72,7 +74,7 @@ generate_sources_file() {
 
     # Process template values passed down by the Python builder engine.
     # We substitute runtime ${DIST} and ${CODENAME} values securely via shell expansion.
-    RAW_URI="http://download.docker.com/linux/${TARGET_DIST}"
+    RAW_URI="http://download.docker.com/linux/${TARGET_DISTRO}"
     RAW_SUITE="${TARGET_CODENAME}"
     RAW_COMPONENTS="stable"
 
@@ -115,7 +117,7 @@ fetch_dynamic_keyring() {
 
     log_debug "Preparing to download docker apt key to: ${KEYRING_PATH}"
 
-    RAW_KEY_URL="https://download.docker.com/linux/${TARGET_DIST}/gpg"
+    RAW_KEY_URL="https://download.docker.com/linux/${TARGET_DISTRO}/gpg"
 
     # Establish a safe, temporary sandbox file path for the initial download
     TEMP_STAGING_KEY=$(mktemp)

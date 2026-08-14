@@ -39,7 +39,7 @@ normalize_os_environment() {
     # shellcheck enable=all
 
     # Default fallback values assignment
-    TARGET_DIST="${ID}"
+    TARGET_DISTRO="${ID}"
     TARGET_CODENAME="${VERSION_CODENAME}"
 
     log_debug "Raw system detected - ID: ${ID}, CODENAME: ${VERSION_CODENAME}"
@@ -56,7 +56,9 @@ normalize_os_environment() {
             ;;
     esac
 
-    log_debug "Normalized runtime targets - DIST: ${TARGET_DIST}, CODENAME: ${TARGET_CODENAME}"
+
+
+    log_debug "Normalized runtime targets - DIST: ${TARGET_DISTRO}, CODENAME: ${TARGET_CODENAME}"
 }
 
 # -----------------------------------------------------------------------------

@@ -1,3 +1,11 @@
+docker-repo-config (1.0.3) stable; urgency=medium
+
+  * Updated version to 1.0.3
+  * Modified repo.url: http://download.docker.com/linux/${TARGET_DISTRO}
+  * Modified repo.key_url: https://download.docker.com/linux/${TARGET_DISTRO}/gpg
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 00:28:45 -0500
+
 docker-repo-config (1.0.2) stable; urgency=medium
 
   * Updated version to 1.0.2
