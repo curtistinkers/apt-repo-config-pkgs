@@ -263,6 +263,7 @@ def _handle_version_bump_prompt(
                 repo_key_url=updated_config.repo.key_url if updated_config.repo else "",
                 repo_key_fingerprint=updated_config.repo.key_fingerprint if updated_config.repo else "", # noqa
                 os_mappings=updated_config.os_mappings,
+                suite_aliases=updated_config.suite_aliases,
             )
 
             # Flush content to disk platter
