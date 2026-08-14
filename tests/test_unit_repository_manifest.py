@@ -167,6 +167,11 @@ def test_manifest_rejects_non_dictionary_os_mapping_item(
 
 
 def test_manifest_successfully_parses_optional_suite_aliases(manifest_suites_alias: str) -> None:
+    """Verifies that RepositoryManifest extracts the suite_aliases lookup dictionary.
+
+    Args:
+        manifest_suites_alias: A test fixture providing a raw manifest string with suite aliases.
+    """
     # Initialize a real, quiet logger dependency
     logger = Logger(min_terminal_level="emergency")
 

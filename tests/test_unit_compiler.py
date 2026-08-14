@@ -12,6 +12,7 @@ import yaml
 from package_generator import (
     DebianTemplateCompiler,
     Logger,
+    ProjectConfig,
     ProjectManifest,
     RepositoryManifest,
 )
@@ -106,14 +107,14 @@ def test_compiler_successfully_recreates_exact_repository_manifest_file(
 def test_compiler_context_includes_suite_aliases(
     tmp_path: Path,
     manifest_suites_alias: str,
-    project_config: str,
+    project_config_object: ProjectConfig
 ) -> None:
-    """Verifies that the compiler incorporates suite_aliases into the render context.
+    """Verifies that the template compiler incorporates suite_aliases into its context map.
 
     Args:
         tmp_path: A built-in pytest fixture providing a temporary directory path.
-        project_config: A test fixture providing raw project YAML text.
-        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+        manifest_suites_alias: A test fixture providing a raw manifest string with suite aliases.
+        project_config_object: A project configuration text fixture containing global project info.
     """
     logger = Logger(min_terminal_level="emergency")
 
@@ -128,10 +129,6 @@ def test_compiler_context_includes_suite_aliases(
         encoding="utf-8"
     )
 
-    # 2. MODELS: Load manifest data and manually inject sample suite aliases
-    raw_project_data = yaml.safe_load(project_config)
-    project_manifest = ProjectManifest(raw_data=raw_project_data, logger=logger)
-
     raw_manifest_data = yaml.safe_load(manifest_suites_alias)
     manifest = RepositoryManifest(raw_data=raw_manifest_data, logger=logger)
 
@@ -140,7 +137,7 @@ def test_compiler_context_includes_suite_aliases(
     rendered_output = compiler.render_template(
         template_name="mock_postinst",
         package_config=manifest.config,
-        project_config=project_manifest.config,
+        project_config=project_config_object,
     )
 
     # 4. ASSERTION: Verify that the variables were successfully processed by Jinja
