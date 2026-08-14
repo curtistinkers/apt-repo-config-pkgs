@@ -118,10 +118,10 @@ class RepositoryManifest:
         """
         self._logger.debug("Compiling valid primitive schema keys into PackageConfig DVO...")
 
-        repo_dvo = self._parse_repo(self._raw_data["repo"])
+        repo = self._parse_repo(self._raw_data["repo"])
 
         raw_mappings = self._raw_data.get("os_mappings", {})
-        mapping_dvos = self._parse_os_mappings(raw_mappings)
+        os_mappings = self._parse_os_mappings(raw_mappings)
 
         compiled_config = PackageConfig(
             name=str(self._raw_data["name"]).strip(),
@@ -129,8 +129,9 @@ class RepositoryManifest:
             description=str(self._raw_data["description"]).strip(),
             copyright_year=int(self._raw_data["copyright_year"]),
             dynamic_keyring=bool(self._raw_data.get("dynamic_keyring", False)),
-            repo=repo_dvo,
-            os_mappings=mapping_dvos,
+            repo=repo,
+            os_mappings=os_mappings,
+            suite_aliases=self._raw_data.get("suite_aliases", {}),
         )
 
         self._logger.info(f"Successfully validated and compiled manifest: {compiled_config.name}")

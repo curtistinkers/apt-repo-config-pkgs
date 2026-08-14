@@ -211,6 +211,35 @@ def changelog_v3(changelog_v2: str) -> str:
 {changelog_v2.strip()}
 """
 
+
+@pytest.fixture
+def manifest_suites_alias() -> str:
+    """Complete mock YAML configuration.
+
+    A shared fixture providing a standard, mock YAML configuration. This simulates a valid vendor
+    configuration file for testing processors.
+
+    Returns:
+        A multiline YAML string representing a standard manifest.
+    """
+    return """name: test-repo
+version: 1.0.0
+description: Test repository package layout configuration.
+copyright_year: 2024
+dynamic_keyring: false
+
+repo:
+  url: https://example.com
+  suites: ${TARGET_CODENAME}
+  components: main
+  key_url: https://example.com/signing.gpg
+
+suite_aliases:
+    bookworm: sandworm
+    trixie: synchrony
+"""
+
+
 @pytest.fixture
 def manifest_invalid_schema() -> str:
     """Malformed YAML fixture.
@@ -335,7 +364,6 @@ def mock_changelog_template() -> str:
 
  -- {{ maintainer_name }} <{{ maintainer_email }}>  {{ current_date }}
 """
-
 
 @pytest.fixture
 def config_v1(manifest_v1: str) -> PackageConfig:

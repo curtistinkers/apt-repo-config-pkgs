@@ -101,3 +101,48 @@ def test_compiler_successfully_recreates_exact_repository_manifest_file(
 
     # 4. SYMMETRICAL LOOP ASSERTION: Recreated text must match origin text exactly
     assert rendered_output == manifest_v1
+
+
+def test_compiler_context_includes_suite_aliases(
+    tmp_path: Path,
+    manifest_suites_alias: str,
+    project_config: str,
+) -> None:
+    """Verifies that the compiler incorporates suite_aliases into the render context.
+
+    Args:
+        tmp_path: A built-in pytest fixture providing a temporary directory path.
+        project_config: A test fixture providing raw project YAML text.
+        manifest_v1: A test fixture providing a valid raw manifest YAML string.
+    """
+    logger = Logger(min_terminal_level="emergency")
+
+    # 1. SETUP: Establish temporary files and directories
+    sandbox_dir = tmp_path / "templates"
+    sandbox_dir.mkdir()
+
+    # Write a mock template file that renders the raw keys from suite_aliases
+    template_file = sandbox_dir / "mock_postinst"
+    template_file.write_text(
+        "{% for k, v in suite_aliases.items() %}{{ k }}: {{ v }}\n{% endfor %}",
+        encoding="utf-8"
+    )
+
+    # 2. MODELS: Load manifest data and manually inject sample suite aliases
+    raw_project_data = yaml.safe_load(project_config)
+    project_manifest = ProjectManifest(raw_data=raw_project_data, logger=logger)
+
+    raw_manifest_data = yaml.safe_load(manifest_suites_alias)
+    manifest = RepositoryManifest(raw_data=raw_manifest_data, logger=logger)
+
+    # 3. EXECUTION: Run the template compiler
+    compiler = DebianTemplateCompiler(templates_dir=sandbox_dir, logger=logger)
+    rendered_output = compiler.render_template(
+        template_name="mock_postinst",
+        package_config=manifest.config,
+        project_config=project_manifest.config,
+    )
+
+    # 4. ASSERTION: Verify that the variables were successfully processed by Jinja
+    assert "bookworm: sandworm" in rendered_output
+    assert "trixie: synchrony" in rendered_output

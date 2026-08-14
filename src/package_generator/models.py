@@ -1,7 +1,7 @@
 # src/package_generator/models.py
 """Pure, immutable Data Value Objects representing our package and project parameters."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,7 @@ class PackageConfig:
     dynamic_keyring: bool
     repo: PackageRepoConfig  # <-- Nested structured value object type-hint
     os_mappings: dict[str, PackageOSMappingConfig]
+    suite_aliases: dict[str, str] = field(default_factory=dict)
 
 @dataclass(frozen=True)
 class ChangelogEntry:

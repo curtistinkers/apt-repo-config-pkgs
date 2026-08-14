@@ -91,7 +91,7 @@ class DebianTemplateCompiler:
 
             rule_block = (
                 f"        {match_key})\n"
-                f'            TARGET_DIST="{mapping.distro}"\n'
+                f'            TARGET_DISTRO="{mapping.distro}"\n'
                 f'            TARGET_CODENAME="{mapping.codename}"\n'
                 "            ;;"
             )
@@ -128,6 +128,7 @@ class DebianTemplateCompiler:
             "repo_components": package_config.repo.components if package_config.repo else "",
             "repo_key_url": package_config.repo.key_url if package_config.repo else "",
             "os_mappings": package_config.os_mappings,
+            "suite_aliases": package_config.suite_aliases,
 
             "maintainer_name": project_config.maintainer_name,
             "maintainer_email": project_config.maintainer_email,

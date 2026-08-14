@@ -1,0 +1,15 @@
+name: openmediavault
+version: 1.0.0
+description: Configures the official OpenMediaVault repository.
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: http://packages.openmediavault.org/public
+  suites: ${TARGET_CODENAME}
+  components: main
+  key_url: https://packages.openmediavault.io/archive.key
+
+suite_aliases:
+  bookworm: sandworm
+  trixie: synchrony

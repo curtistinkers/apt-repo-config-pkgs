@@ -165,3 +165,14 @@ def test_manifest_rejects_non_dictionary_os_mapping_item(
 
     assert expected_message == str(error_context.value)
 
+
+def test_manifest_successfully_parses_optional_suite_aliases(manifest_suites_alias: str) -> None:
+    # Initialize a real, quiet logger dependency
+    logger = Logger(min_terminal_level="emergency")
+
+    raw_input_data = yaml.safe_load(manifest_suites_alias)
+    """Verifies that RepositoryManifest extracts the suite_aliases lookup dictionary."""
+
+    manifest = RepositoryManifest(raw_data=raw_input_data, logger=logger)
+
+    assert manifest.config.suite_aliases == {"bookworm": "sandworm", "trixie": "synchrony"}
