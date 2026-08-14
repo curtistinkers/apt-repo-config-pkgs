@@ -20,6 +20,7 @@ dependencies = [
     "jinja2>=3.1",
     "requests>=2.31",
     "click>=8.4.2",
+    "pgpdump>=1.5",
 ]
 
 [project.optional-dependencies]
