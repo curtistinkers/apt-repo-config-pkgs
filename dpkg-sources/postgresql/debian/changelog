@@ -1,0 +1,13 @@
+postgresql-repo-config (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=Configures the official PostgreSQL repository.
+  * copyright_year=2026
+  * dynamic_keyring=false
+  * repo.url=https://apt.postgresql.org/pub/repos/apt
+  * repo.suites=${TARGET_CODENAME}-pgdg
+  * repo.components=main
+  * repo.key_url=https://www.postgresql.org/media/keys/ACCC4CF8.asc
+  * repo.key_fingerprint=B97B 0AFC AA1A 47F0 44F2 44A0 7FCC 7D46 ACCC 4CF8
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 05:02:34 -0500
