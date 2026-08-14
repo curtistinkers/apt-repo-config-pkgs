@@ -1,3 +1,10 @@
+log2ram-repo-config (1.0.1) stable; urgency=medium
+
+  * Updated version to 1.0.1
+  * Modified repo.key_fingerprint: 98B8 24A5 FA7D 3A10 FDB2 25B7 CA54 8A0A 0312 D8E6
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 03:29:21 -0500
+
 log2ram-repo-config (1.0.0) stable; urgency=medium
 
   * Initial package definition established.

@@ -1,5 +1,5 @@
 name: log2ram
-version: 1.0.0
+version: 1.0.1
 description: Automatically configures the log2ram repository.
 copyright_year: 2026
 dynamic_keyring: false
@@ -10,3 +10,4 @@ repo:
   components: main
   key_url: https://azlux.fr/repo.gpg
   key_fingerprint: 98B8 24A5 FA7D 3A10 FDB2 25B7 CA54 8A0A 0312 D8E6
+

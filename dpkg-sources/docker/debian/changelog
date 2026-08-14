@@ -1,3 +1,10 @@
+docker-repo-config (1.0.4) stable; urgency=medium
+
+  * Updated version to 1.0.4
+  * Modified repo.key_fingerprint: 9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 14 Aug 2026 03:32:11 -0500
+
 docker-repo-config (1.0.3) stable; urgency=medium
 
   * Updated version to 1.0.3

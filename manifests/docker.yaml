@@ -1,5 +1,5 @@
 name: docker
-version: 1.0.3
+version: 1.0.4
 description: Configures the official Docker CE repository.
 copyright_year: 2026
 dynamic_keyring: true
@@ -9,6 +9,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: stable
   key_url: https://download.docker.com/linux/${TARGET_DISTRO}/gpg
+  key_fingerprint: 9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88
 
 os_mappings:
   pop|linuxmint|elementary:
