@@ -9,6 +9,7 @@ repo:
   suites: {{ repo_suites }}
   components: {{ repo_components }}
   key_url: {{ repo_key_url }}
+  key_fingerprint: {{ repo_key_url }}
 {% if os_mappings %}
 os_mappings:
 {%- for match_key, mapping in os_mappings.items() %}

@@ -198,6 +198,10 @@ class Changelog:
             key_val = entry.changes.split("Modified repo.key_url:", 1)[1].splitlines()
             history_map["repo.key_url"] = key_val[0].strip()
 
+        if "Modified repo.key_fingerprint:" in entry.changes:
+            key_val = entry.changes.split("Modified repo.key_fingerprint:", 1)[1].splitlines()
+            history_map["repo.key_fingerprint"] = key_val[0].strip()
+
         pruned_match = re.search(r"Removed os_mappings\.([^\s\n\.]+)\.", entry.changes)
         if pruned_match:
             matched_flavor = pruned_match.group(1).strip()
@@ -240,7 +244,8 @@ class Changelog:
             f"  * repo.url={config.repo.url}",
             f"  * repo.suites={config.repo.suites}",
             f"  * repo.components={config.repo.components}",
-            f"  * repo.key_url={config.repo.key_url}"
+            f"  * repo.key_url={config.repo.key_url}",
+            f"  * repo.key_fingerprint={config.repo.key_fingerprint}"
         ]
 
         for match_key, mapping in config.os_mappings.items():
@@ -314,6 +319,10 @@ class Changelog:
         if "repo.key_url" in history_map and history_map["repo.key_url"] != config.repo.key_url:
             self._logger.debug("Change detected: Package 'repo.key_url' field updated.")
             bullet_lines.append(f"  * Modified repo.key_url: {config.repo.key_url}")
+
+        if "repo.key_fingerprint" in history_map and history_map["repo.key_fingerprint"] != config.repo.key_fingerprint:
+            self._logger.debug("Change detected: Package 'repo.key_fingerprint' field updated.")
+            bullet_lines.append(f"  * Modified repo.key_fingerprint: {config.repo.key_fingerprint}")
 
 
     def _check_keyring_strategy_toggle(
@@ -393,6 +402,7 @@ class Changelog:
             suites=history_map.get("repo.suites", ""),
             components=history_map.get("repo.components", ""),
             key_url=history_map.get("repo.key_url", ""),
+            key_fingerprint=history_map.get("repo.key_fingerprint", ""),
         )
 
         # FIX 3: Iterate straight through the chronological list layout. No sorting!
