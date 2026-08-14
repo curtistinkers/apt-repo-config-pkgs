@@ -1,5 +1,5 @@
 name: curtistinkers
-version: 1.0.1
+version: 1.0.2
 description: My private repository.
 copyright_year: 2026
 dynamic_keyring: false
@@ -9,6 +9,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main non-free
   key_url: https://apt.curtistinkers.com/curtistinkers-archive-keyring.gpg
+  key_fingerprint: C0B9 5CBE 6C0B 88EA DAF5  E6CC BEE2 64F9 BF8F 8CB5
 
 os_mappings:
   pop|linuxmint|elementary:

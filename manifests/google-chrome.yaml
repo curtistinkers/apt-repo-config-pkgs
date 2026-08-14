@@ -1,0 +1,12 @@
+name: google-chrome
+version: 1.0.0
+description: Configures the official apt repository for Google Chrome
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: http://dl.google.com/linux/chrome/deb/
+  suites: stable
+  components: main
+  key_url: https://dl.google.com/linux/linux_signing_key.pub
+  key_fingerprint: EB4C 1BFD 4F04 2F6D DDCC EC91 7721 F63B D38B 4796

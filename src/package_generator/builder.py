@@ -114,6 +114,8 @@ class DebianPackageBuilder:
                     f"Forced read-write permissions (644) for file: {generated_file.name}"
                 )
 
+        self._verify_compiled_keyring_signature(target_debian_dir=target_debian_dir, config=config)
+
         self._logger.info(f"Successfully finalized debian/ container at: {target_debian_dir}")
         return target_debian_dir
 
@@ -238,3 +240,54 @@ class DebianPackageBuilder:
             self._logger.info(
                 f"Successfully removed workspace target tree layout: {dir_to_remove}"
             )
+
+    def _verify_compiled_keyring_signature(
+        self,
+        target_debian_dir: Path,
+        config: PackageConfig
+    ) -> None:
+        """Extracts the repo key's fingerprint and verifies it against the manifest specification.
+
+        Args:
+            target_debian_dir: Physical Path targeting the package debian folder track.
+            config: Validated, strongly typed package configuration parameters.
+
+        Raises:
+            ValueError: If a critical cryptographic fingerprint signature mismatch occurs.
+        """
+        # If no signature parameter was defined in the manifest file, skip verification safely
+        if not config.repo or not config.repo.key_fingerprint:
+            return
+
+        self._logger.debug(f"Enforcing cryptographic key verification for package: '{config.name}'")
+
+        # Resolve the standard binary layout path location where our static keyring sits on disk
+        keyring_file = target_debian_dir.parent / "usr" / "share" / "keyrings" / f"{config.name}-archive-keyring.gpg" # noqa
+
+        if not keyring_file.exists():
+            # If no_download_keys bypassed download, the file might not be present to verify
+            self._logger.debug(
+                f"Verification skipped: Keyring asset file not present on disk path: {keyring_file}"
+            )
+            return
+
+        # 1. Decode the binary packet properties using our pure-Python pgpdump engine wrapper
+        actual_fingerprint = self._gpg_engine.extract_fingerprint(key_file_path=keyring_file)
+
+        # 2. Sanitize and flatten both string representations to remove internal space boundaries
+        clean_expected = str(config.repo.key_fingerprint).replace(" ", "").strip().upper()
+        clean_actual = actual_fingerprint.replace(" ", "").strip().upper()
+
+        # 3. Enforce the strict cryptographic boundary check gate rail match
+        if clean_actual != clean_expected:
+            err_msg = (
+                f"CRITICAL: Cryptographic handshake failed for package manifest '{config.name}'!\n"
+                f"Expected: {clean_expected}\n"
+                f"Discovered: {clean_actual}"
+            )
+            self._logger.error(err_msg)
+            raise ValueError(err_msg)
+
+        self._logger.notice(
+            f"Cryptographic fingerprint verification successful for package: '{config.name}'"
+        )

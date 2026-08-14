@@ -127,6 +127,7 @@ class DebianTemplateCompiler:
             "repo_suites": package_config.repo.suites if package_config.repo else "",
             "repo_components": package_config.repo.components if package_config.repo else "",
             "repo_key_url": package_config.repo.key_url if package_config.repo else "",
+            "repo_key_fingerprint": package_config.repo.key_fingerprint if package_config.repo else "",  # noqa
             "os_mappings": package_config.os_mappings,
             "suite_aliases": package_config.suite_aliases,
 

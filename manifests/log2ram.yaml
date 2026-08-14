@@ -9,3 +9,4 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main
   key_url: https://azlux.fr/repo.gpg
+  key_fingerprint: 98B8 24A5 FA7D 3A10 FDB2 25B7 CA54 8A0A 0312 D8E6

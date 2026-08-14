@@ -95,6 +95,9 @@ class RepositoryManifest:
             suites=str(repo_block["suites"]).strip(),
             components=str(repo_block["components"]).strip(),
             key_url=str(repo_block["key_url"]).strip(),
+            key_fingerprint=str(
+                repo_block.get("key_fingerprint")
+            ).strip() if "key_fingerprint" in repo_block else None,
         )
 
     def _parse_os_mappings(self, raw_mappings: dict[str, Any]) -> dict[str, PackageOSMappingConfig]:

@@ -7,6 +7,10 @@ and dearmor cleartext public keys down to binary format layouts.
 
 import base64
 import re
+from pathlib import Path
+
+import pgpdump
+from pgpdump.packet import PublicKeyPacket
 
 from .logger import Logger
 
@@ -87,3 +91,42 @@ class GpgEngine:
             )
             self._logger.error(err_msg)
             raise ValueError(err_msg) from decode_error
+
+
+    def extract_fingerprint(self, key_file_path: Path) -> str:
+        """Extracts the primary key fingerprint from a binary keyring file using pgpdump.
+
+        Args:
+            key_file_path: Physical filesystem Path to the binary GPG keyring.
+
+        Returns:
+            A sanitized, uppercase, flat hexadecimal fingerprint string.
+
+        Raises:
+            RuntimeError: If the file cannot be parsed or lacks a valid public key packet.
+        """
+        self._logger.debug(f"Parsing binary OpenPGP packets from: {key_file_path}")
+
+        try:
+            raw_bytes = key_file_path.read_bytes()
+            # Feed the binary stream straight into the pgpdump packet engine
+            data = pgpdump.BinaryData(raw_bytes)
+
+            for packet in data.packets():
+                # Locate the primary Public Key Packet
+                if isinstance(packet, PublicKeyPacket):
+                    # Safely decode the raw bytes attribute into a standard python string!
+                    raw_fpr = packet.fingerprint
+                    if isinstance(raw_fpr, bytes):
+                        fingerprint = raw_fpr.decode("utf-8").strip().upper()
+                    else:
+                        fingerprint = str(raw_fpr).strip().upper()
+                    self._logger.debug(f"Successfully decoded key fingerprint: {fingerprint}")
+                    return fingerprint
+
+        except Exception as error:
+            raise RuntimeError(
+                f"Failed to extract fingerprint from keyring file: {error}"
+            ) from error
+
+        raise RuntimeError(f"No valid public key packet found inside: {key_file_path}")

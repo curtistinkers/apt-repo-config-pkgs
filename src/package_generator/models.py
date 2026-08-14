@@ -21,6 +21,7 @@ class PackageRepoConfig:
     suites: str
     components: str
     key_url: str
+    key_fingerprint: str | None = None
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,12 @@
+name: github-cli
+version: 1.0.0
+description: Configures the official apt repository for GitHub CLI
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: http://cli.github.com/packages/
+  suites: stable
+  components: main
+  key_url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+  key_fingerprint: 2C61 0620 1985 B60E 6C7A C873 23F3 D4EA 7571 6059
