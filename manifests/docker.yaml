@@ -5,10 +5,10 @@ copyright_year: 2026
 dynamic_keyring: true
 
 repo:
-  url: http://download.docker.com/linux/${TARGET_DIST}
+  url: http://download.docker.com/linux/${TARGET_DISTRO}
   suites: ${TARGET_CODENAME}
   components: stable
-  key_url: https://download.docker.com/linux/${TARGET_DIST}/gpg
+  key_url: https://download.docker.com/linux/${TARGET_DISTRO}/gpg
 
 os_mappings:
   pop|linuxmint|elementary:
