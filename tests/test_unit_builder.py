@@ -60,6 +60,8 @@ def mock_builder_ctx(
     gpg_engine = MagicMock()
     gpg_engine.dearmor.return_value = b"MOCK_BINARY_BYTES"
 
+    gpg_engine.extract_fingerprint.return_value = "NONE"
+
     # Inject dependencies straight into the constructor layout
     builder = DebianPackageBuilder(
         sources_dir=sources_dir,

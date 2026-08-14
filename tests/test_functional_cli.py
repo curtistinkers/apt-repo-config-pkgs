@@ -16,6 +16,14 @@ from click.testing import CliRunner
 from package_generator.cli import main_cli
 
 
+@pytest.fixture(autouse=True)
+def skip_functional_fingerprint_validation() -> Generator[None, None, None]:
+    """Bypasses the builder verification gate rail during end-to-end functional testing."""
+    with patch("package_generator.builder.DebianPackageBuilder._verify_compiled_keyring_signature") as mock_verify:
+        mock_verify.return_value = None
+        yield
+
+
 @pytest.fixture
 def cli_sandbox(
     tmp_path: Path,

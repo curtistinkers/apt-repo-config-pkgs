@@ -66,6 +66,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main
   key_url: https://example.com/signing.gpg
+  key_fingerprint: None
 os_mappings:
   raspbian:
     distro: debian
@@ -93,6 +94,7 @@ def changelog_v1() -> str:
   * repo.suites=${TARGET_CODENAME}
   * repo.components=main
   * repo.key_url=https://example.com/signing.gpg
+  * repo.key_fingerprint=None
   * os_mappings.raspbian.distro=debian
   * os_mappings.raspbian.codename=${VERSION_CODENAME}
   * os_mappings.pop|linuxmint.distro=ubuntu
@@ -123,6 +125,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main
   key_url: https://v2.example.com/signing.gpg
+  key_fingerprint: None
 os_mappings:
   raspbian:
     distro: debian
@@ -179,6 +182,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main
   key_url: https://v2.example.com/signing.gpg
+  key_fingerprint: None
 os_mappings:
   pop|linuxmint:
     distro: ubuntu
@@ -233,6 +237,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main
   key_url: https://example.com/signing.gpg
+  repo.key_fingerprint: None
 
 suite_aliases:
     bookworm: sandworm
@@ -344,6 +349,7 @@ repo:
   suites: {{ repo_suites }}
   components: {{ repo_components }}
   key_url: {{ repo_key_url }}
+  key_fingerprint: {{ repo_key_fingerprint }}
 os_mappings:
 {%- for match_key, mapping in os_mappings.items() %}
   {{ match_key }}:

@@ -320,7 +320,7 @@ class Changelog:
             self._logger.debug("Change detected: Package 'repo.key_url' field updated.")
             bullet_lines.append(f"  * Modified repo.key_url: {config.repo.key_url}")
 
-        if "repo.key_fingerprint" in history_map and history_map["repo.key_fingerprint"] != config.repo.key_fingerprint:
+        if "repo.key_fingerprint" in history_map and history_map["repo.key_fingerprint"] != config.repo.key_fingerprint:  #noqa
             self._logger.debug("Change detected: Package 'repo.key_fingerprint' field updated.")
             bullet_lines.append(f"  * Modified repo.key_fingerprint: {config.repo.key_fingerprint}")
 
