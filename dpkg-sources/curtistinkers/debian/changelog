@@ -15,6 +15,7 @@ curtistinkers-repo-config (1.0.0) stable; urgency=medium
   * repo.suites=${TARGET_CODENAME}
   * repo.components=main non-free
   * repo.key_url=https://apt.curtistinkers.com/curtistinkers-archive-keyring.gpg
+  * repo.key_fingerprint=None
   * os_mappings.pop|linuxmint|elementary.distro=ubuntu
   * os_mappings.pop|linuxmint|elementary.codename=${UBUNTU_CODENAME}
   * os_mappings.raspbian.distro=debian

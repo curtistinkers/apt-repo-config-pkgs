@@ -30,6 +30,7 @@ docker-repo-config (1.0.0) stable; urgency=medium
   * repo.suites=${TARGET_CODENAME}
   * repo.components=stable
   * repo.key_url=https://download.docker.com/linux/${TARGET_DIST}/gpg
+  * repo.key_fingerprint=None
   * os_mappings.pop|linuxmint|elementary.distro=ubuntu
   * os_mappings.pop|linuxmint|elementary.codename=${UBUNTU_CODENAME}
 
