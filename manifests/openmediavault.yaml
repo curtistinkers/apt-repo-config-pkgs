@@ -1,5 +1,5 @@
 name: openmediavault
-version: 1.0.1
+version: 1.0.0
 description: Configures the official OpenMediaVault repository.
 copyright_year: 2026
 dynamic_keyring: false
