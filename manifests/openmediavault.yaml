@@ -1,5 +1,5 @@
 name: openmediavault
-version: 1.0.0
+version: 1.0.1
 description: Configures the official OpenMediaVault repository.
 copyright_year: 2026
 dynamic_keyring: false
@@ -9,7 +9,7 @@ repo:
   suites: ${TARGET_CODENAME}
   components: main
   key_url: https://packages.openmediavault.io/archive.key
-  key_fingerprint: D675 06C8 78E0 8A94 FD7E  0094 2486 3F0C 716B 980B
+  key_fingerprint: D675 06C8 78E0 8A94 FD7E 0094 2486 3F0C 716B 980B
 
 suite_aliases:
   bookworm: sandworm
