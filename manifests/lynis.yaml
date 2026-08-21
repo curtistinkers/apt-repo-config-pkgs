@@ -1,0 +1,12 @@
+name: lynis
+version: 1.0.0
+description: My private repository.
+copyright_year: 2026
+dynamic_keyring: false
+
+repo:
+  url: http://packages.cisofy.com/community/lynis/deb/
+  suites: stable
+  components: main
+  key_url: https://packages.cisofy.com/keys/cisofy-software-public.key
+  key_fingerprint: 84FA A998 3B24 AEF2 4D6C 87F1 FEBB 7D18 1257 6482

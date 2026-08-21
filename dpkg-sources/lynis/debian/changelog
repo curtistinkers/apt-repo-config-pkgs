@@ -1,0 +1,13 @@
+lynis-repo-config (1.0.0) stable; urgency=medium
+
+  * Initial package definition established.
+  * description=My private repository.
+  * copyright_year=2026
+  * dynamic_keyring=false
+  * repo.url=http://packages.cisofy.com/community/lynis/deb/
+  * repo.suites=stable
+  * repo.components=main
+  * repo.key_url=https://packages.cisofy.com/keys/cisofy-software-public.key
+  * repo.key_fingerprint=84FA A998 3B24 AEF2 4D6C 87F1 FEBB 7D18 1257 6482
+
+ -- curtistinkers <curtistinkers@gmail.com>  Fri, 21 Aug 2026 10:03:02 -0500

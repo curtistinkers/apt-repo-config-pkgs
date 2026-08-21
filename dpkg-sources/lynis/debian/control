@@ -1,0 +1,13 @@
+Source: lynis-repo-config
+Section: utils
+Priority: optional
+Maintainer: curtistinkers <curtistinkers@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+
+Package: lynis-repo-config
+Architecture: all
+Depends: ${misc:Depends}
+Description: My private repository.
+ This package automatically manages the APT repository configuration and
+ secure cryptographic keyrings for lynis.
